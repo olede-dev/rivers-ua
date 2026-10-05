@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, type Ref } from 'vue'
 
 import { STATIONS } from '../config/stations'
 import { anomalyPct, classifyDischarge } from '../lib/anomaly'
@@ -7,10 +7,14 @@ import type { DischargeSeries, NormsFile, Station, StationState } from '../types
 import { useDischarge } from './useDischarge'
 import { useNorms } from './useNorms'
 
-function valueOn(series: DischargeSeries | undefined, date: string): number | null {
+/** Observed discharge up to `today`, the ensemble median after it. */
+function valueOn(series: DischargeSeries | undefined, date: string, today: string): number | null {
   if (!series) return null
   const index = series.time.indexOf(date)
-  return index === -1 ? null : series.discharge[index]
+  if (index === -1) return null
+  return date > today
+    ? (series.ensemble.median[index] ?? series.discharge[index])
+    : series.discharge[index]
 }
 
 function toState(
@@ -18,10 +22,11 @@ function toState(
   series: DischargeSeries | undefined,
   norms: NormsFile | undefined,
   today: string,
+  date: string,
 ): StationState {
-  const current = valueOn(series, today)
+  const current = valueOn(series, date, today)
   const stationNorms = norms?.stations[station.id]
-  const norm = stationNorms?.doy[dayOfYear(today) - 1] ?? null
+  const norm = stationNorms?.doy[dayOfYear(date) - 1] ?? null
   return {
     station,
     cell: series?.cell ?? null,
@@ -33,17 +38,23 @@ function toState(
   }
 }
 
-/** Joins today's discharge with the day-of-year norm for every station. */
-export function useStationsState() {
+/**
+ * Joins today's discharge with the day-of-year norm for every station. `mapDate`, when given,
+ * drives `mapStates` too: the same join for another day (the map timelapse).
+ */
+export function useStationsState(mapDate?: Ref<string>) {
   const discharge = useDischarge()
   const norms = useNorms()
   const today = todayKyiv()
 
-  const states = computed(() =>
+  const statesOn = (date: string) =>
     STATIONS.map((station) =>
-      toState(station, discharge.data.value?.series.get(station.id), norms.data.value, today),
-    ),
+      toState(station, discharge.data.value?.series.get(station.id), norms.data.value, today, date),
+    )
+  const states = computed(() => statesOn(today))
+  const mapStates = computed(() =>
+    !mapDate || mapDate.value === today ? states.value : statesOn(mapDate.value),
   )
 
-  return { states, today, discharge, norms }
+  return { states, mapStates, today, discharge, norms }
 }

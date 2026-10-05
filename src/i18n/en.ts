@@ -127,6 +127,15 @@ export const en: Messages = {
   map: {
     ariaLabel: 'Station map: marker colour shows the water state',
     legendTitle: 'Water level vs norm',
+    timeline: {
+      label: 'Map date',
+      play: 'Play the timelapse',
+      pause: 'Pause the timelapse',
+      today: 'Today',
+      todayLabel: 'Back to today',
+      forecast: 'forecast',
+      past: 'observed',
+    },
   },
   dischargeUnit: 'm³/s',
   basins: {

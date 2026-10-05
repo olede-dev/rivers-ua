@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { addDays, dayOfYear, todayKyiv } from '../src/lib/dates'
+import { addDays, dayOfYear, daysBetween, todayKyiv } from '../src/lib/dates'
 
 describe('dayOfYear', () => {
   it.each([
@@ -48,5 +48,13 @@ describe('todayKyiv', () => {
     ['2026-03-28T22:30:00Z', '2026-03-29'],
   ])('at %s Kyiv date is %s', (instant, expected) => {
     expect(todayKyiv(new Date(instant))).toBe(expected)
+  })
+})
+
+describe('daysBetween', () => {
+  it('counts days across months and leap days, signed', () => {
+    expect(daysBetween('2024-02-27', '2024-03-01')).toBe(3)
+    expect(daysBetween('2026-10-05', '2026-08-06')).toBe(-60)
+    expect(daysBetween('2026-10-05', '2026-10-05')).toBe(0)
   })
 })

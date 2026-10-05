@@ -127,6 +127,15 @@ export const uk = {
   map: {
     ariaLabel: 'Карта станцій: колір маркера — стан водності',
     legendTitle: 'Водність відносно норми',
+    timeline: {
+      label: 'Дата на карті',
+      play: 'Відтворити таймлапс',
+      pause: 'Призупинити таймлапс',
+      today: 'Сьогодні',
+      todayLabel: 'Повернутися до сьогодні',
+      forecast: 'прогноз',
+      past: 'спостереження',
+    },
   },
   /** m³/s; also the chart's absolute mode label. */
   dischargeUnit: 'м³/с',

@@ -49,6 +49,11 @@ export function addDays(date: string, days: number): string {
   return fromUtcMs(toUtcMs(date) + days * MS_PER_DAY)
 }
 
+/** Whole days from `from` to `to`; negative when `to` is earlier. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((toUtcMs(to) - toUtcMs(from)) / MS_PER_DAY)
+}
+
 /** Current instant as epoch milliseconds; the one place app code reads the wall clock. */
 export function nowMs(): number {
   return Date.now()
