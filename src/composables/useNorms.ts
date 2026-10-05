@@ -22,7 +22,7 @@ async function fetchNorms(signal: AbortSignal): Promise<NormsFile> {
   return body
 }
 
-/** Static 1991–2020 norms built by `npm run build:norms`; never stale within a session. */
+/** Static 1997–2020 norms built by `npm run build:norms`; never stale within a session. */
 export function useNorms() {
   return useQuery({
     queryKey: ['norms'],

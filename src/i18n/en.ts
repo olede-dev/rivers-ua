@@ -4,13 +4,13 @@ export const en: Messages = {
   htmlLang: 'en',
   documentTitle: 'Rivers of Ukraine — state and runoff forecast',
   documentDescription:
-    'Water levels of major Ukrainian rivers against the 1991–2020 norm and the GloFAS ensemble runoff forecast.',
+    'Water levels of major Ukrainian rivers against the 1997–2020 norm and the GloFAS ensemble runoff forecast.',
 
   header: {
     title: 'Rivers of Ukraine',
     titleSuffix: ' — state and runoff forecast',
     subtitleShort: 'State and runoff forecast',
-    subtitleLong: 'GloFAS modelled discharge, 1991–2020 norm',
+    subtitleLong: 'GloFAS modelled discharge, 1997–2020 norm',
     stations: 'Stations',
     showStations: 'Show station list',
     hideStations: 'Hide station list',
@@ -102,7 +102,7 @@ export const en: Messages = {
     precipitationRateLimited:
       'Precipitation unavailable: the Open-Meteo request limit is exhausted.',
     chartNote:
-      'Forecast — GloFAS ensemble: median, interquartile range (p25–p75) and full spread (min–max). Norm — 1991–2020 for the same day of the year.',
+      'Forecast — GloFAS ensemble: median, interquartile range (p25–p75) and full spread (min–max). Norm — 1997–2020 for the same day of the year.',
   },
   chart: {
     rangeLabel: 'Forecast horizon',
@@ -169,7 +169,7 @@ export const en: Messages = {
     chartHeading: (date: string) => `Low-flow days from 1 January to ${date}, by year`,
     chartAria: 'Bars: number of low-flow days over the same period of every year',
     chartNote:
-      'A low-flow day is a day with discharge below the 1991–2020 p10 norm for that day of year. GloFAS reanalysis data is available from 1997.',
+      'A low-flow day is a day with discharge below the 1997–2020 p10 norm for that day of year.',
     loading: 'Loading climate data…',
     failed: 'Could not load climate data.',
     thisYearFailed: 'This year’s data did not load — only past years are shown.',

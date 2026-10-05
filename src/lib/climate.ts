@@ -2,7 +2,7 @@ import type { ClimateFile, DailyValues, StationNorms } from '../types'
 import { dayOfYear } from './dates'
 import { mean, nonNull } from './stats'
 
-/** Inclusive year range, e.g. `{ from: 1991, to: 2005 }`. */
+/** Inclusive year range, e.g. `{ from: 1997, to: 2010 }`. */
 export interface YearRange {
   from: number
   to: number

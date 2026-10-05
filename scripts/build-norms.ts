@@ -1,4 +1,4 @@
-// Builds the 1991–2020 day-of-year discharge climatology for every station from
+// Builds the 1997–2020 day-of-year discharge climatology for every station from
 // GloFAS reanalysis and writes public/data/norms.json. The calculation itself
 // lives in src/lib/norms.ts, shared with the app's tests.
 import { writeFile } from 'node:fs/promises'
@@ -10,8 +10,9 @@ import { NORM_SMOOTHING_WINDOW_DAYS, computeNorms } from '../src/lib/norms'
 import type { NormsFile, StationNorms } from '../src/types'
 import { retryOnRateLimit } from './lib/rate-limit'
 
-// WMO standard climatological normal.
-const PERIOD = { startDate: '1991-01-01', endDate: '2020-12-31' }
+// The WMO standard normal 1991–2020, shortened: the reanalysis behind Open-Meteo has
+// values from 1997 only, and earlier days come back null.
+const PERIOD = { startDate: '1997-01-01', endDate: '2020-12-31' }
 const PAUSE_MS = 300
 const TIMEOUT_MS = 120_000
 const OUTPUT = new URL('../public/data/norms.json', import.meta.url)
@@ -27,7 +28,7 @@ for (const [i, station] of STATIONS.entries()) {
 }
 
 const output: NormsFile = {
-  period: '1991-2020',
+  period: '1997-2020',
   smoothingWindowDays: NORM_SMOOTHING_WINDOW_DAYS,
   source: 'GloFAS v4 reanalysis via Open-Meteo',
   stations,

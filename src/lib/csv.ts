@@ -21,7 +21,7 @@ function cell(value: number | null | undefined): string {
 }
 
 /**
- * One row per date of the series: discharge, ensemble statistics and the 1991–2020 norm for
+ * One row per date of the series: discharge, ensemble statistics and the 1997–2020 norm for
  * that day of year. Machine-readable on purpose — English headers, `.` decimals, empty cells
  * for missing values — so spreadsheets in any locale parse it the same way.
  */

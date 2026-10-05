@@ -3,7 +3,7 @@
 [![Deploy](https://github.com/olede-dev/rivers-ua/actions/workflows/deploy.yml/badge.svg)](https://github.com/olede-dev/rivers-ua/actions/workflows/deploy.yml)
 
 Інтерактивна карта водності великих річок України: модельні витрати води GloFAS відносно норми
-1991–2020 і ансамблевий прогноз стоку до 7 місяців.
+1997–2020 і ансамблевий прогноз стоку до 7 місяців.
 
 **Демо:** https://olede-dev.github.io/rivers-ua/
 
@@ -32,7 +32,7 @@
   сітка ~5 км. Це **модельні дані, а не спостереження гідрологічних постів**.
 - **Опади** — [Open-Meteo Forecast API](https://open-meteo.com/en/docs), добова сума в точці станції,
   а не середня по водозбору. Запитуються лише для вибраної станції, коли увімкнено перемикач.
-- **Норма** — період 1991–2020 за реаналізом GloFAS: для кожного дня року p10, p25, медіана, p75 і
+- **Норма** — період 1997–2020 за реаналізом GloFAS: для кожного дня року p10, p25, медіана, p75 і
   p90 з усіх значень у вікні ±3 дні. Пораховано один раз скриптом і збережено в
   [`public/data/norms.json`](public/data/norms.json).
 - **Стан водності** — витрата Q за сьогодні (за київським часом) відносно норми того самого дня
@@ -63,7 +63,7 @@ npm run dev
 | `npm run lint`              | ESLint                                                |
 | `npm test`                  | тести Vitest                                          |
 | `npm run validate:stations` | перевірка координат станцій через Open-Meteo          |
-| `npm run build:norms`       | перерахунок норм 1991–2020 у `public/data/norms.json` |
+| `npm run build:norms`       | перерахунок норм 1997–2020 у `public/data/norms.json` |
 | `npm run build:climate`     | тренд стоку і дні маловоддя за роками у `public/data/climate.json` (після `build:norms`) |
 | `npm run build:geo`         | лінії річок і кордон України (Natural Earth 1:10m, з Кримом) у `public/data/*.geojson` |
 | `npm run build:snapshot`    | запасний знімок витрат у `public/data/discharge-snapshot.json` (не комітиться; CI робить його перед кожним деплоєм і щодня) |

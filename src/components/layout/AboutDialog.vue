@@ -113,14 +113,17 @@ defineExpose({ open })
           {{ t.about.normHeading }}
         </h3>
         <p v-if="locale === 'uk'">
-          Норма — кліматичний період ВМО <strong>1991–2020</strong>. Для кожного дня року беруться
-          модельні витрати за всі 30 років у вікні ±3 дні (≈210 значень) і рахуються медіана та
-          перцентилі p10, p25, p75, p90. 29 лютого прирівнюється до 28 лютого.
+          Норма — період <strong>1997–2020</strong>. Реаналіз GloFAS в Open-Meteo має дані лише з
+          1997 року, тож стандартний період ВМО 1991–2020 скорочено до 24 років. Для кожного дня
+          року беруться модельні витрати за всі ці роки у вікні ±3 дні (≈170 значень) і рахуються
+          медіана та перцентилі p10, p25, p75, p90. 29 лютого прирівнюється до 28 лютого.
         </p>
         <p v-else>
-          The norm is the WMO climate period <strong>1991–2020</strong>. For each day of the year,
-          modelled discharge from all 30 years within a ±3-day window (≈210 values) gives the median
-          and the percentiles p10, p25, p75, p90. 29 February counts as 28 February.
+          The norm covers <strong>1997–2020</strong>. The GloFAS reanalysis in Open-Meteo has data
+          from 1997 only, so the standard WMO period 1991–2020 is shortened to 24 years. For each
+          day of the year, modelled discharge from all those years within a ±3-day window (≈170
+          values) gives the median and the percentiles p10, p25, p75, p90. 29 February counts as 28
+          February.
         </p>
       </section>
 
