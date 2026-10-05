@@ -83,14 +83,20 @@ onBeforeUnmount(stop)
           {{ formatDayMonth(date, locale) }}
         </span>
         <span
-          class="rounded px-1.5 py-0.5 font-medium"
+          class="grid rounded px-1.5 py-0.5 text-center font-medium"
           :class="
             isForecast
               ? 'bg-violet-100 dark:bg-violet-950 text-violet-800 dark:text-violet-200'
               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
           "
         >
-          {{ isForecast ? t.map.timeline.forecast : t.map.timeline.past }}
+          <!-- Both labels share one grid cell so the badge keeps the wider one's width. -->
+          <span class="col-start-1 row-start-1" :class="{ invisible: isForecast }">{{
+            t.map.timeline.past
+          }}</span>
+          <span class="col-start-1 row-start-1" :class="{ invisible: !isForecast }">{{
+            t.map.timeline.forecast
+          }}</span>
         </span>
       </div>
       <div class="relative">
@@ -112,9 +118,10 @@ onBeforeUnmount(stop)
         ></span>
       </div>
     </div>
+    <!-- Hidden rather than removed, so the slider keeps its width while playing. -->
     <button
-      v-if="date !== today"
       type="button"
+      :class="{ invisible: date === today }"
       class="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-sky-800 dark:text-sky-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
       :aria-label="t.map.timeline.todayLabel"
       @click="backToToday"
