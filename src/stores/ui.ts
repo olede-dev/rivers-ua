@@ -18,6 +18,8 @@ export const useUiStore = defineStore('ui', () => {
   const range = ref<ChartRange>(DEFAULT_URL_STATE.range)
   const mode = ref<ChartMode>(DEFAULT_URL_STATE.mode)
   const showPrecip = ref(DEFAULT_URL_STATE.precip)
+  /** Stations sidebar: a docked panel on wide screens, a drawer on narrow ones. Not in the URL. */
+  const sidebarOpen = ref(false)
 
   function selectStation(id: string | null) {
     selectedId.value = id
@@ -47,6 +49,7 @@ export const useUiStore = defineStore('ui', () => {
     range,
     mode,
     showPrecip,
+    sidebarOpen,
     selectStation,
     toUrlState,
     applyUrlState,

@@ -11,11 +11,11 @@ const props = defineProps<{ states: readonly StationState[] }>()
 type SortKey = 'name' | 'current' | 'pct' | 'class'
 type SortDirection = 'asc' | 'desc'
 
-const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
-  { key: 'name', label: 'Річка / пункт', numeric: false },
-  { key: 'current', label: 'Витрата, м³/с', numeric: true },
-  { key: 'pct', label: '% від норми', numeric: true },
-  { key: 'class', label: 'Стан', numeric: false },
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'pct', label: '% від норми' },
+  { key: 'current', label: 'витратою' },
+  { key: 'class', label: 'станом' },
+  { key: 'name', label: 'назвою' },
 ]
 
 const ui = useUiStore()
@@ -33,7 +33,7 @@ function sortValue(state: StationState, key: SortKey): string | number | null {
     case 'pct':
       return state.anomalyPct
     case 'class':
-      // Missing values sort last, like the other columns.
+      // Missing values sort last, like the other keys.
       return state.anomalyClass && state.anomalyClass !== 'no-data'
         ? ANOMALY_CLASSES.findIndex((c) => c.id === state.anomalyClass)
         : null
@@ -54,18 +54,13 @@ const rows = computed(() => {
     .sort((a, b) => compare(sortValue(a, sortKey.value), sortValue(b, sortKey.value), sign))
 })
 
-function sortBy(key: SortKey) {
-  if (sortKey.value === key) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortKey.value = key
-    sortDirection.value = key === 'name' ? 'asc' : 'desc'
-  }
+/** Names read A→Я by default; numbers start from the largest. */
+function onSortKeyChange() {
+  sortDirection.value = sortKey.value === 'name' ? 'asc' : 'desc'
 }
 
-function ariaSort(key: SortKey): 'ascending' | 'descending' | 'none' {
-  if (sortKey.value !== key) return 'none'
-  return sortDirection.value === 'asc' ? 'ascending' : 'descending'
+function toggleDirection() {
+  sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
 }
 
 function dotStyle(state: StationState): Record<string, string> {
@@ -75,67 +70,66 @@ function dotStyle(state: StationState): Record<string, string> {
 </script>
 
 <template>
-  <table class="w-full border-collapse text-sm">
-    <caption class="sr-only">
-      Станції та стан водності на сьогодні. Рядок відкриває станцію.
-    </caption>
-    <thead>
-      <tr class="border-b border-slate-200 text-left text-xs text-slate-600">
-        <th
-          v-for="column in COLUMNS"
-          :key="column.key"
-          scope="col"
-          :aria-sort="ariaSort(column.key)"
-          class="py-2 font-medium"
-          :class="column.numeric ? 'pr-3 text-right' : 'pr-2'"
-        >
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 rounded hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-sky-700"
-            @click="sortBy(column.key)"
-          >
-            {{ column.label }}
-            <span aria-hidden="true" class="w-2">
-              {{ sortKey === column.key ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
-            </span>
-          </button>
-        </th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr
-        v-for="state in rows"
-        :key="state.station.id"
-        tabindex="0"
-        :aria-current="ui.selectedId === state.station.id ? 'true' : undefined"
-        class="cursor-pointer border-b border-slate-100 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sky-700"
-        :class="{ 'bg-sky-50 hover:bg-sky-50': ui.selectedId === state.station.id }"
-        @click="ui.selectStation(state.station.id)"
-        @keydown.enter.prevent="ui.selectStation(state.station.id)"
-        @keydown.space.prevent="ui.selectStation(state.station.id)"
+  <div class="space-y-2">
+    <div class="flex items-center gap-2 text-sm text-slate-600">
+      <label for="station-sort">Сортувати за</label>
+      <select
+        id="station-sort"
+        v-model="sortKey"
+        class="min-w-0 rounded-md border border-slate-300 bg-white py-1 pr-7 pl-2 text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+        @change="onSortKeyChange"
       >
-        <td class="py-2 pr-2">
-          <span class="font-medium text-slate-900">{{ state.station.river }}</span>
-          <span class="text-slate-600"> — {{ state.station.place }}</span>
-          <span
-            v-if="state.station.focus"
-            class="mt-0.5 block w-fit rounded bg-sky-100 px-1.5 text-[11px] text-sky-900"
-          >
-            фокусний басейн
-          </span>
-        </td>
-        <td class="py-2 pr-3 text-right tabular-nums">{{ formatDischarge(state.current) }}</td>
-        <td class="py-2 pr-3 text-right tabular-nums">{{ formatPct(state.anomalyPct) }}</td>
-        <td class="py-2">
-          <span v-if="state.anomalyClass" class="flex items-center gap-1.5">
-            <span class="size-2.5 shrink-0 rounded-full" :style="dotStyle(state)"></span>
-            <span class="text-xs leading-tight text-slate-700">
-              {{ ANOMALY_CLASS_INFO[state.anomalyClass].label }}
+        <option v-for="option in SORT_OPTIONS" :key="option.key" :value="option.key">
+          {{ option.label }}
+        </option>
+      </select>
+      <button
+        type="button"
+        class="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+        :aria-label="sortDirection === 'asc' ? 'За зростанням' : 'За спаданням'"
+        :title="sortDirection === 'asc' ? 'За зростанням' : 'За спаданням'"
+        @click="toggleDirection"
+      >
+        <span aria-hidden="true">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+      </button>
+    </div>
+
+    <ul class="-mx-2" aria-label="Станції та стан водності на сьогодні">
+      <li v-for="state in rows" :key="state.station.id">
+        <button
+          type="button"
+          :aria-current="ui.selectedId === state.station.id ? 'true' : undefined"
+          class="flex w-full items-start gap-3 rounded-md px-2 py-2.5 text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sky-700"
+          :class="{ 'bg-sky-50 hover:bg-sky-50': ui.selectedId === state.station.id }"
+          @click="ui.selectStation(state.station.id)"
+        >
+          <span class="mt-1.5 size-2.5 shrink-0 rounded-full" :style="dotStyle(state)"></span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm leading-snug">
+              <span class="font-medium text-slate-900">{{ state.station.river }}</span>
+              <span class="text-slate-600"> — {{ state.station.place }}</span>
+            </span>
+            <span
+              class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-600"
+            >
+              <span>{{
+                state.anomalyClass ? ANOMALY_CLASS_INFO[state.anomalyClass].label : 'Стан невідомий'
+              }}</span>
+              <span v-if="state.station.focus" class="rounded bg-sky-100 px-1.5 text-sky-900">
+                фокусний басейн
+              </span>
             </span>
           </span>
-          <span v-else class="text-slate-500">—</span>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+          <span class="shrink-0 text-right tabular-nums">
+            <span class="block text-sm leading-snug font-semibold text-slate-900">
+              {{ formatPct(state.anomalyPct) }}
+            </span>
+            <span class="mt-0.5 block text-xs whitespace-nowrap text-slate-600">
+              {{ formatDischarge(state.current) }} м³/с
+            </span>
+          </span>
+        </button>
+      </li>
+    </ul>
+  </div>
 </template>

@@ -6,3 +6,20 @@
     max-width: 50%;
   }
 }
+
+/* The stations drawer slides in from the left edge on narrow screens. */
+.drawer[open] {
+  animation: drawer-in 200ms ease-out;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer[open] {
+    animation: none;
+  }
+}

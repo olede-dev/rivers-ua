@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, h } from 'vue'
+import { computed, defineAsyncComponent, h, watch } from 'vue'
 
 import AppFooter from '../components/layout/AppFooter.vue'
 import AppHeader from '../components/layout/AppHeader.vue'
+import StationsSidebar from '../components/layout/StationsSidebar.vue'
 import RiverMap from '../components/map/RiverMap.vue'
-import BasinFilter from '../components/panel/BasinFilter.vue'
-import StationList from '../components/panel/StationList.vue'
-import ErrorState from '../components/ui/ErrorState.vue'
 import LoadingSkeleton from '../components/ui/LoadingSkeleton.vue'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { useStationsState } from '../composables/useStationsState'
 import { useUrlSync } from '../composables/useUrlSync'
 import { useUiStore } from '../stores/ui'
@@ -24,56 +23,62 @@ useUrlSync()
 const { states, today, discharge, norms } = useStationsState()
 const dischargeSettled = computed(() => !discharge.isPending.value)
 const selected = computed(() => states.value.find((s) => s.station.id === ui.selectedId) ?? null)
+
+// Tailwind's `lg`: the sidebar docks beside the map and starts open; below it, a closed drawer.
+const isDesktop = useMediaQuery('(min-width: 64rem)')
+watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
 </script>
 
 <template>
   <div class="flex min-h-dvh flex-col bg-slate-50 lg:h-dvh">
     <AppHeader />
-    <main class="flex-1 lg:grid lg:min-h-0 lg:grid-cols-[3fr_2fr]">
-      <section class="h-[45vh] lg:h-full" aria-label="Карта">
-        <RiverMap :states="states" :show-markers="dischargeSettled" />
-      </section>
-      <aside
-        class="space-y-4 border-slate-200 bg-white p-4 lg:overflow-y-auto lg:border-l"
-        :aria-label="selected ? 'Станція' : undefined"
-        :aria-labelledby="selected ? undefined : 'stations-heading'"
-      >
-        <StationDetails
+    <div class="flex flex-1 lg:min-h-0">
+      <StationsSidebar
+        :states="states"
+        :modal="!isDesktop"
+        :pending="discharge.isPending.value"
+        :discharge-error="discharge.isError.value"
+        :norms-error="norms.isError.value"
+        @retry="discharge.refetch()"
+      />
+      <main class="flex min-w-0 flex-1 flex-col lg:flex-row">
+        <section
+          class="isolate shrink-0 lg:h-auto lg:min-w-0 lg:flex-1"
+          :class="selected ? 'h-[45dvh]' : 'h-[calc(100dvh-7rem)]'"
+          aria-label="Карта"
+        >
+          <RiverMap :states="states" :show-markers="dischargeSettled" />
+        </section>
+        <aside
           v-if="selected"
-          :key="selected.station.id"
-          :state="selected"
-          :series="discharge.data.value?.get(selected.station.id)"
-          :norms="norms.data.value?.stations[selected.station.id] ?? null"
-          :today="today"
-          :status="discharge.status.value"
-          @retry="discharge.refetch()"
-        />
-        <template v-else>
-          <h2 id="stations-heading" class="text-base font-semibold text-slate-900">Станції</h2>
-          <BasinFilter />
-          <ErrorState
-            v-if="discharge.isError.value"
-            message="Не вдалося завантажити дані Open-Meteo."
+          aria-label="Станція"
+          class="border-slate-200 bg-white p-4 lg:w-[26rem] lg:shrink-0 lg:overflow-y-auto lg:border-l xl:w-[32rem] 2xl:w-[36rem]"
+        >
+          <StationDetails
+            :key="selected.station.id"
+            :state="selected"
+            :series="discharge.data.value?.get(selected.station.id)"
+            :norms="norms.data.value?.stations[selected.station.id] ?? null"
+            :today="today"
+            :status="discharge.status.value"
             @retry="discharge.refetch()"
           />
-          <p v-if="norms.isError.value" class="text-sm text-slate-600">
-            Норми не завантажилися — відхилення і стан водності недоступні.
-          </p>
-          <LoadingSkeleton
-            v-if="discharge.isPending.value"
-            label="Завантаження даних…"
-            class="space-y-3"
+        </aside>
+        <div
+          v-else-if="!isDesktop"
+          class="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 text-sm text-slate-600"
+        >
+          <span>Оберіть станцію на карті</span>
+          <button
+            type="button"
+            class="rounded-md bg-sky-800 px-3 py-1.5 font-medium text-white hover:bg-sky-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+            @click="ui.sidebarOpen = true"
           >
-            <div
-              v-for="n in 6"
-              :key="n"
-              class="h-8 animate-pulse rounded bg-slate-100 motion-reduce:animate-none"
-            ></div>
-          </LoadingSkeleton>
-          <StationList v-else :states="states" />
-        </template>
-      </aside>
-    </main>
+            Список станцій
+          </button>
+        </div>
+      </main>
+    </div>
     <AppFooter />
   </div>
 </template>

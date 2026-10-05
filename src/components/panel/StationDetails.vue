@@ -44,28 +44,39 @@ const chartSeries = computed(
     }),
 )
 
-// The panel replaces the list in place; move focus so keyboard and screen-reader users follow.
+// The panel opens beside the map; move focus so keyboard and screen-reader users follow.
 onMounted(() => heading.value?.focus())
 </script>
 
 <template>
   <article class="space-y-4">
-    <button
-      type="button"
-      class="rounded text-sm text-sky-800 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
-      @click="ui.selectStation(null)"
-    >
-      ← До списку
-    </button>
-
     <header>
-      <h2
-        ref="heading"
-        tabindex="-1"
-        class="text-lg font-semibold text-slate-900 focus-visible:outline-none"
-      >
-        {{ state.station.river }} — {{ state.station.place }}
-      </h2>
+      <div class="flex items-start justify-between gap-3">
+        <h2
+          ref="heading"
+          tabindex="-1"
+          class="text-lg font-semibold text-slate-900 focus-visible:outline-none"
+        >
+          {{ state.station.river }} — {{ state.station.place }}
+        </h2>
+        <button
+          type="button"
+          aria-label="Закрити станцію"
+          title="Закрити станцію"
+          class="-m-1 inline-flex size-8 shrink-0 items-center justify-center rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-sky-700"
+          @click="ui.selectStation(null)"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="size-5"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
       <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
         <span>Басейн: {{ BASIN_LABELS[state.station.basin] }}</span>
         <span v-if="state.station.focus" class="rounded bg-sky-100 px-1.5 text-[11px] text-sky-900">
