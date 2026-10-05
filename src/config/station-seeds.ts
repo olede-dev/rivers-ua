@@ -4,6 +4,10 @@ import type { StationSeed } from '../types'
  * Approximate coordinates as written by hand. GloFAS returns the largest river
  * within a ~5 km cell, so these are refined by `npm run validate:stations`;
  * the app reads the validated result through `stations.ts`.
+ *
+ * `marker` is where the map draws the station: the point on the OpenStreetMap river
+ * line nearest to the validated GloFAS cell (Overpass API, checked 2026-10-05).
+ * The cell centre itself can lie up to ~5 km off the river.
  */
 export const STATION_SEEDS: readonly StationSeed[] = [
   {
@@ -15,6 +19,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 50.45,
     lon: 30.57,
     expectedMeanRange: [1000, 1500],
+    marker: { lat: 50.3877, lon: 30.5868 },
   },
   {
     id: 'desna-chernihiv',
@@ -25,6 +30,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 51.47,
     lon: 31.31,
     expectedMeanRange: [250, 400],
+    marker: { lat: 51.4512, lon: 31.2818 },
   },
   {
     id: 'desna-novhorod-siverskyi',
@@ -35,6 +41,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 52.0,
     lon: 33.27,
     expectedMeanRange: [150, 300],
+    marker: { lat: 51.9418, lon: 33.276 },
   },
   {
     id: 'prypiat-chornobyl',
@@ -45,6 +52,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 51.28,
     lon: 30.23,
     expectedMeanRange: [350, 500],
+    marker: { lat: 51.2495, lon: 30.2906 },
   },
   {
     id: 'dnister-zalishchyky',
@@ -55,6 +63,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 48.64,
     lon: 25.73,
     expectedMeanRange: [150, 300],
+    marker: { lat: 48.6406, lon: 25.7469 },
   },
   {
     id: 'prut-chernivtsi',
@@ -65,6 +74,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 48.31,
     lon: 25.93,
     expectedMeanRange: [50, 100],
+    marker: { lat: 48.276, lon: 26.0118 },
   },
   {
     id: 'tysa-vylok',
@@ -75,6 +85,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 48.1,
     lon: 22.83,
     expectedMeanRange: [150, 250],
+    marker: { lat: 48.1095, lon: 22.7734 },
   },
   {
     id: 'danube-izmail',
@@ -85,6 +96,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 45.34,
     lon: 28.84,
     expectedMeanRange: [5000, 7000],
+    marker: { lat: 45.3159, lon: 28.8726 },
   },
   {
     id: 'pivdennyi-buh-pervomaisk',
@@ -95,6 +107,7 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 48.04,
     lon: 30.85,
     expectedMeanRange: [50, 120],
+    marker: { lat: 48.0438, lon: 30.8414 },
   },
   {
     id: 'siverskyi-donets-izium',
@@ -105,5 +118,6 @@ export const STATION_SEEDS: readonly StationSeed[] = [
     lat: 49.21,
     lon: 37.26,
     expectedMeanRange: [30, 80],
+    marker: { lat: 49.1595, lon: 37.2641 },
   },
 ]

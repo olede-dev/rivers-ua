@@ -15,6 +15,8 @@ export interface StationSeed extends Coordinates {
   focus: boolean
   /** Expected long-term mean discharge range, m³/s (order of magnitude). */
   expectedMeanRange: readonly [number, number]
+  /** Map position on the river line; data is still queried at `lat`/`lon`. */
+  marker: Coordinates
 }
 
 /** A station whose coordinates passed `scripts/validate-stations.ts`. */
@@ -60,4 +62,22 @@ export interface NormsFile {
   smoothingWindowDays: number
   source: string
   stations: Record<string, StationNorms>
+}
+
+export type AnomalyClass = 'very-low' | 'low' | 'normal' | 'high' | 'very-high' | 'no-data'
+
+/** A station joined with today's discharge and norm, as the map and list display it. */
+export interface StationState {
+  station: Station
+  /** Centre of the GloFAS cell; `null` until discharge has loaded. */
+  cell: Coordinates | null
+  /** Discharge for today in Kyiv, m³/s. */
+  current: number | null
+  /** Norm for today's day of year; `null` when norms are unavailable. */
+  norm: NormDay | null
+  meanAnnual: number | null
+  /** `null` when norms are unavailable, so no class can be assigned. */
+  anomalyClass: AnomalyClass | null
+  /** Signed whole percent deviation from the median norm. */
+  anomalyPct: number | null
 }
