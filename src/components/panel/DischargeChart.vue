@@ -16,10 +16,14 @@ import {
   type TooltipItem,
 } from 'chart.js'
 import annotationPlugin from 'chartjs-plugin-annotation'
+import { enGB } from 'date-fns/locale/en-GB'
 import { uk } from 'date-fns/locale/uk'
 import { computed } from 'vue'
 import { Line } from 'vue-chartjs'
 
+import { useLocale } from '../../composables/useLocale'
+import { useTheme } from '../../composables/useTheme'
+import type { Locale } from '../../i18n'
 import { type ChartSeries, valueAxisMax } from '../../lib/chartSeries'
 import { formatDischarge, formatPctOfNorm } from '../../lib/format'
 import type { DailyValues } from '../../types'
@@ -43,15 +47,38 @@ const props = defineProps<{
   relative: boolean
 }>()
 
-const COLORS = {
-  norm: '#64748b',
-  normBand: 'rgba(100, 116, 139, 0.15)',
-  forecast: '#2563eb',
-  forecastOuter: 'rgba(37, 99, 235, 0.12)',
-  forecastInner: 'rgba(37, 99, 235, 0.25)',
-  past: '#1e3a8a',
-  today: '#0f172a',
+const PALETTES = {
+  light: {
+    norm: '#64748b',
+    normBand: 'rgba(100, 116, 139, 0.15)',
+    forecast: '#2563eb',
+    forecastOuter: 'rgba(37, 99, 235, 0.12)',
+    forecastInner: 'rgba(37, 99, 235, 0.25)',
+    past: '#1e3a8a',
+    today: '#0f172a',
+    todayText: '#ffffff',
+    text: '#475569',
+    grid: 'rgba(15, 23, 42, 0.1)',
+  },
+  dark: {
+    norm: '#94a3b8',
+    normBand: 'rgba(148, 163, 184, 0.18)',
+    forecast: '#60a5fa',
+    forecastOuter: 'rgba(96, 165, 250, 0.14)',
+    forecastInner: 'rgba(96, 165, 250, 0.3)',
+    past: '#e0f2fe',
+    today: '#e2e8f0',
+    todayText: '#0f172a',
+    text: '#cbd5e1',
+    grid: 'rgba(226, 232, 240, 0.12)',
+  },
 }
+
+const DATE_LOCALES = { uk, en: enGB } satisfies Record<Locale, unknown>
+
+const { isDark } = useTheme()
+const { locale, t } = useLocale()
+const colors = computed(() => (isDark.value ? PALETTES.dark : PALETTES.light))
 
 type LineDataset = ChartDataset<'line', DailyValues>
 
@@ -64,7 +91,9 @@ interface Band {
 }
 
 const formatValue = (value: number | null) =>
-  props.relative ? formatPctOfNorm(value) : `${formatDischarge(value)} м³/с`
+  props.relative
+    ? formatPctOfNorm(value, locale.value)
+    : `${formatDischarge(value, locale.value)} ${t.value.dischargeUnit}`
 
 function line(label: string, data: DailyValues, style: Partial<LineDataset>): LineDataset {
   return { label, data, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1.5, ...style }
@@ -72,13 +101,15 @@ function line(label: string, data: DailyValues, style: Partial<LineDataset>): Li
 
 const chart = computed(() => {
   const { series, relative } = props
+  const COLORS = colors.value
+  const labels = t.value.chart
   const bands: Band[] = []
   const lines: LineDataset[] = []
 
   // Listed bottom to top; datasets are reversed below because Chart.js draws index 0 last.
   if (series.norm) {
     bands.push({
-      label: 'Норма p25–p75',
+      label: labels.normBand,
       lower: series.norm.p25,
       upper: series.norm.p75,
       fill: COLORS.normBand,
@@ -86,13 +117,13 @@ const chart = computed(() => {
   }
   bands.push(
     {
-      label: 'Прогноз min–max',
+      label: labels.forecastSpread,
       lower: series.forecast.min,
       upper: series.forecast.max,
       fill: COLORS.forecastOuter,
     },
     {
-      label: 'Прогноз p25–p75',
+      label: labels.forecastIqr,
       lower: series.forecast.p25,
       upper: series.forecast.p75,
       fill: COLORS.forecastInner,
@@ -100,19 +131,19 @@ const chart = computed(() => {
   )
   if (series.norm) {
     lines.push(
-      line(relative ? 'Норма (100%)' : 'Норма (медіана)', series.norm.median, {
+      line(relative ? labels.normRelative : labels.normMedian, series.norm.median, {
         borderColor: COLORS.norm,
         borderDash: [5, 4],
       }),
     )
   }
   lines.push(
-    line('Прогноз (медіана ансамблю)', series.forecast.median, {
+    line(labels.forecastMedian, series.forecast.median, {
       borderColor: COLORS.forecast,
       borderDash: [6, 3],
       borderWidth: 2,
     }),
-    line('Минулі значення (модель)', series.past, { borderColor: COLORS.past, borderWidth: 2 }),
+    line(labels.past, series.past, { borderColor: COLORS.past, borderWidth: 2 }),
   )
 
   // Top-most first. Each band upper line is followed by its lower line and fills to it.
@@ -149,7 +180,9 @@ function tooltipLabel(item: TooltipItem<'line'>): string {
 
 const options = computed((): ChartOptions<'line'> => {
   const { lowerIndices } = chart.value
+  const COLORS = colors.value
   return {
+    color: COLORS.text,
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
@@ -158,26 +191,37 @@ const options = computed((): ChartOptions<'line'> => {
     scales: {
       x: {
         type: 'time',
-        adapters: { date: { locale: uk } },
+        adapters: { date: { locale: DATE_LOCALES[locale.value] } },
         time: {
           minUnit: 'day',
           tooltipFormat: 'd MMMM yyyy',
           displayFormats: { day: 'd MMM', week: 'd MMM', month: 'd MMM' },
         },
-        ticks: { maxRotation: 0, autoSkipPadding: 12 },
+        ticks: { maxRotation: 0, autoSkipPadding: 12, color: COLORS.text },
         grid: { display: false },
       },
       y: {
         beginAtZero: true,
         max: valueAxisMax(props.series) ?? undefined,
-        title: { display: true, text: props.relative ? '% від норми' : 'Витрата води, м³/с' },
-        ticks: { callback: (value) => (props.relative ? `${value}%` : formatDischarge(+value)) },
+        title: {
+          display: true,
+          text: props.relative ? t.value.chart.pctOfNorm : t.value.chart.dischargeAxis,
+          color: COLORS.text,
+        },
+        grid: { color: COLORS.grid },
+        border: { color: COLORS.grid },
+        ticks: {
+          color: COLORS.text,
+          callback: (value) =>
+            props.relative ? `${value}%` : formatDischarge(+value, locale.value),
+        },
       },
     },
     plugins: {
       legend: {
         position: 'bottom',
         labels: {
+          color: COLORS.text,
           boxWidth: 14,
           boxHeight: 8,
           filter: (item) => item.datasetIndex === undefined || !lowerIndices.has(item.datasetIndex),
@@ -198,9 +242,10 @@ const options = computed((): ChartOptions<'line'> => {
             borderDash: [3, 3],
             label: {
               display: true,
-              content: 'Сьогодні',
+              content: t.value.chart.today,
               position: 'start',
               backgroundColor: COLORS.today,
+              color: COLORS.todayText,
               font: { size: 11 },
               padding: 3,
             },
@@ -214,11 +259,6 @@ const options = computed((): ChartOptions<'line'> => {
 
 <template>
   <div class="h-[260px] lg:h-80">
-    <Line
-      :data="chart.data"
-      :options="options"
-      aria-label="Графік витрат води: минулі значення, прогноз ансамблю і норма"
-      role="img"
-    />
+    <Line :data="chart.data" :options="options" :aria-label="t.chart.ariaLabel" role="img" />
   </div>
 </template>

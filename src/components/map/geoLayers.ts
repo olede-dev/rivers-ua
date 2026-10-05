@@ -9,11 +9,20 @@ import type { BorderFile, RiversFile } from '../../config/geo'
 export const RIVERS_PANE = 'rivers'
 export const BORDER_PANE = 'border'
 
-const RIVER_COLOR = '#2563eb'
-const BORDER_COLOR = '#7c93c3'
-const BORDER_HALO_COLOR = '#fde68a'
-/** Light veil over everything outside Ukraine so the country reads as the focus. */
-const OUTSIDE_VEIL = { color: '#ffffff', opacity: 0.45 }
+/** The veil over everything outside Ukraine makes the country read as the focus. */
+const GEO_COLORS = {
+  light: {
+    river: '#2563eb',
+    border: '#7c93c3',
+    halo: '#fde68a',
+    haloOpacity: 0.35,
+    veil: '#ffffff',
+  },
+  dark: { river: '#60a5fa', border: '#94a3b8', halo: '#facc15', haloOpacity: 0.2, veil: '#020617' },
+}
+const VEIL_OPACITY = 0.45
+
+const geoColors = (dark: boolean) => (dark ? GEO_COLORS.dark : GEO_COLORS.light)
 const WORLD_RING: L.LatLngTuple[] = [
   [-85, -180],
   [-85, 180],
@@ -32,14 +41,18 @@ function riverWeight(major: boolean, zoom: number): number {
   return base + Math.max(0, zoom - 6) * (major ? 0.6 : 0.35)
 }
 
-export function createRiversLayer(data: RiversFile, renderer: L.Renderer): L.GeoJSON {
+export function createRiversLayer(
+  data: RiversFile,
+  renderer: L.Renderer,
+  dark: boolean,
+): L.GeoJSON {
   // L.geoJSON passes its own options to every path it creates, renderer included.
   const options: L.GeoJSONOptions & Pick<L.PathOptions, 'renderer'> = {
     pane: RIVERS_PANE,
     renderer,
     interactive: false,
     style: (feature) => ({
-      color: RIVER_COLOR,
+      color: geoColors(dark).river,
       opacity: feature?.properties.major ? 0.85 : 0.6,
       lineCap: 'round',
       lineJoin: 'round',
@@ -58,18 +71,23 @@ function outerRings(border: BorderFile): L.LatLngTuple[][] {
   )
 }
 
-/** Veil outside the country, a soft yellow halo and a light blue-grey outline along the border. */
-export function createBorderLayer(border: BorderFile, renderer: L.Renderer): L.LayerGroup {
+/** Veil outside the country, a soft yellow halo and a blue-grey outline along the border. */
+export function createBorderLayer(
+  border: BorderFile,
+  renderer: L.Renderer,
+  dark: boolean,
+): L.LayerGroup {
+  const colors = geoColors(dark)
   const rings = outerRings(border)
   const common = { pane: BORDER_PANE, interactive: false, renderer, lineJoin: 'round' as const }
   return L.layerGroup([
     L.polygon([WORLD_RING, ...rings], {
       ...common,
       stroke: false,
-      fillColor: OUTSIDE_VEIL.color,
-      fillOpacity: OUTSIDE_VEIL.opacity,
+      fillColor: colors.veil,
+      fillOpacity: VEIL_OPACITY,
     }),
-    L.polyline(rings, { ...common, color: BORDER_HALO_COLOR, weight: 5, opacity: 0.35 }),
-    L.polyline(rings, { ...common, color: BORDER_COLOR, weight: 1.25, opacity: 0.7 }),
+    L.polyline(rings, { ...common, color: colors.halo, weight: 5, opacity: colors.haloOpacity }),
+    L.polyline(rings, { ...common, color: colors.border, weight: 1.25, opacity: 0.7 }),
   ])
 }

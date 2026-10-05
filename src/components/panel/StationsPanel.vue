@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLocale } from '../../composables/useLocale'
 import type { StationState } from '../../types'
 import ErrorState from '../ui/ErrorState.vue'
 import LoadingSkeleton from '../ui/LoadingSkeleton.vue'
@@ -14,19 +15,22 @@ defineProps<{
   closeLabel: string
 }>()
 defineEmits<{ retry: []; close: [] }>()
+
+const { t } = useLocale()
 </script>
 
 <template>
   <div class="space-y-4 p-4">
     <div class="flex items-center justify-between gap-2">
-      <h2 id="stations-heading" class="text-base font-semibold text-slate-900">
-        Станції <span class="font-normal text-slate-500">· {{ states.length }}</span>
+      <h2 id="stations-heading" class="text-base font-semibold text-slate-900 dark:text-slate-100">
+        {{ t.panel.heading }}
+        <span class="font-normal text-slate-500 dark:text-slate-400">· {{ states.length }}</span>
       </h2>
       <button
         type="button"
         :aria-label="closeLabel"
         :title="closeLabel"
-        class="-m-1 inline-flex size-8 items-center justify-center rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-sky-700"
+        class="-m-1 inline-flex size-8 items-center justify-center rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
         @click="$emit('close')"
       >
         <svg
@@ -46,14 +50,14 @@ defineEmits<{ retry: []; close: [] }>()
       :message="dischargeErrorMessage"
       @retry="$emit('retry')"
     />
-    <p v-if="normsError" class="text-sm text-slate-600">
-      Норми не завантажилися — відхилення і стан водності недоступні.
+    <p v-if="normsError" class="text-sm text-slate-600 dark:text-slate-400">
+      {{ t.panel.normsFailed }}
     </p>
-    <LoadingSkeleton v-if="pending" label="Завантаження даних…" class="space-y-3">
+    <LoadingSkeleton v-if="pending" :label="t.panel.loading" class="space-y-3">
       <div
         v-for="n in 6"
         :key="n"
-        class="h-8 animate-pulse rounded bg-slate-100 motion-reduce:animate-none"
+        class="h-8 animate-pulse rounded bg-slate-100 dark:bg-slate-800 motion-reduce:animate-none"
       ></div>
     </LoadingSkeleton>
     <StationList v-else :states="states" />

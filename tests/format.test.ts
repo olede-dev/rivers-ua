@@ -34,3 +34,18 @@ describe('formatPlainDate', () => {
     expect(formatPlainDate('2026-10-05')).toMatch(/^5 жовтня 2026/)
   })
 })
+
+describe('English formatting', () => {
+  it('uses a decimal point and comma grouping', () => {
+    expect(formatDischarge(1234.5, 'en')).toBe('1,235')
+    expect(formatDischarge(4.25, 'en')).toBe('4.3')
+  })
+
+  it('writes hemispheres as letters', () => {
+    expect(formatCoordinates({ lat: 50.475, lon: -30.5 }, 'en')).toBe('50.475° N, 30.500° W')
+  })
+
+  it('writes the month in English', () => {
+    expect(formatPlainDate('2026-10-05', 'en')).toBe('5 October 2026')
+  })
+})

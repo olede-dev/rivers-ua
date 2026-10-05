@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useTemplateRef, watch } from 'vue'
 
+import { useLocale } from '../../composables/useLocale'
 import { useUiStore } from '../../stores/ui'
 import type { StationState } from '../../types'
 import StationsPanel from '../panel/StationsPanel.vue'
@@ -16,6 +17,7 @@ const props = defineProps<{
 defineEmits<{ retry: [] }>()
 
 const ui = useUiStore()
+const { t } = useLocale()
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 
 // The native modal dialog gives the drawer focus trapping, Esc and an inert page for free.
@@ -49,7 +51,7 @@ function onDialogClick(event: MouseEvent) {
     id="stations-sidebar"
     ref="dialog"
     aria-labelledby="stations-heading"
-    class="drawer m-0 ms-auto h-dvh max-h-none w-[min(26rem,calc(100%-3rem))] max-w-none overflow-y-auto bg-white p-0 shadow-xl backdrop:bg-slate-900/50"
+    class="drawer m-0 ms-auto h-dvh max-h-none w-[min(26rem,calc(100%-3rem))] max-w-none overflow-y-auto bg-white dark:bg-slate-900 p-0 shadow-xl backdrop:bg-slate-900/50 dark:backdrop:bg-black/60"
     @close="ui.sidebarOpen = false"
     @click="onDialogClick"
   >
@@ -58,7 +60,7 @@ function onDialogClick(event: MouseEvent) {
       :pending="pending"
       :discharge-error-message="dischargeErrorMessage"
       :norms-error="normsError"
-      close-label="Закрити список станцій"
+      :close-label="t.panel.closeStations"
       @retry="$emit('retry')"
       @close="ui.sidebarOpen = false"
     />
@@ -68,14 +70,14 @@ function onDialogClick(event: MouseEvent) {
     v-show="ui.sidebarOpen"
     id="stations-sidebar"
     aria-labelledby="stations-heading"
-    class="w-80 shrink-0 overflow-y-auto border-l border-slate-200 bg-white xl:w-[22rem] 2xl:w-[26rem]"
+    class="w-80 shrink-0 overflow-y-auto border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 xl:w-[22rem] 2xl:w-[26rem]"
   >
     <StationsPanel
       :states="states"
       :pending="pending"
       :discharge-error-message="dischargeErrorMessage"
       :norms-error="normsError"
-      close-label="Сховати список станцій"
+      :close-label="t.header.hideStations"
       @retry="$emit('retry')"
       @close="ui.sidebarOpen = false"
     />

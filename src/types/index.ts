@@ -6,10 +6,16 @@ export interface Coordinates {
 }
 
 /** Hand-written station metadata with approximate coordinates, before validation. */
-export interface StationSeed extends Coordinates {
-  id: string
+/** River and the town or village the station is named after. */
+export interface StationName {
   river: string
   place: string
+}
+
+export interface StationSeed extends Coordinates, StationName {
+  id: string
+  /** English name; `river` and `place` themselves are Ukrainian. */
+  en: StationName
   basin: BasinId
   /** Pripyat, Desna and Upper Dnipro basins: the lab's forecasting focus. */
   focus: boolean

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, useTemplateRef } from 'vue'
 
-import { BASIN_LABELS } from '../../config/basins'
+import { useLocale } from '../../composables/useLocale'
+import { stationName } from '../../i18n'
 import { buildChartSeries } from '../../lib/chartSeries'
 import { formatCoordinates, formatDischarge, formatPct } from '../../lib/format'
 import { useUiStore, type ChartRange } from '../../stores/ui'
@@ -30,6 +31,8 @@ defineEmits<{ retry: [] }>()
 const PAST_DAYS: Record<ChartRange, number> = { 30: 30, 90: 60, 210: 60 }
 
 const ui = useUiStore()
+const { locale, t } = useLocale()
+const name = computed(() => stationName(props.state.station, locale.value))
 const heading = useTemplateRef<HTMLHeadingElement>('heading')
 
 /** Relative mode needs a median norm to divide by; without norms the chart stays in m³/s. */
@@ -57,15 +60,15 @@ onMounted(() => heading.value?.focus())
         <h2
           ref="heading"
           tabindex="-1"
-          class="text-lg font-semibold text-slate-900 focus-visible:outline-none"
+          class="text-lg font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-none"
         >
-          {{ state.station.river }} — {{ state.station.place }}
+          {{ name.river }} — {{ name.place }}
         </h2>
         <button
           type="button"
-          aria-label="Закрити станцію"
-          title="Закрити станцію"
-          class="-m-1 inline-flex size-8 shrink-0 items-center justify-center rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-sky-700"
+          :aria-label="t.details.close"
+          :title="t.details.close"
+          class="-m-1 inline-flex size-8 shrink-0 items-center justify-center rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
           @click="ui.selectStation(null)"
         >
           <svg
@@ -79,42 +82,51 @@ onMounted(() => heading.value?.focus())
           </svg>
         </button>
       </div>
-      <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
-        <span>Басейн: {{ BASIN_LABELS[state.station.basin] }}</span>
-        <span v-if="state.station.focus" class="rounded bg-sky-100 px-1.5 text-[11px] text-sky-900">
-          фокусний басейн
+      <p
+        class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600 dark:text-slate-400"
+      >
+        <span>{{ t.details.basin(t.basins[state.station.basin]) }}</span>
+        <span
+          v-if="state.station.focus"
+          class="rounded bg-sky-100 dark:bg-sky-900 px-1.5 text-[11px] text-sky-900 dark:text-sky-100"
+        >
+          {{ t.panel.focusBasin }}
         </span>
       </p>
-      <p v-if="state.cell" class="mt-0.5 text-xs text-slate-500">
-        Комірка GloFAS: {{ formatCoordinates(state.cell) }}
+      <p v-if="state.cell" class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+        {{ t.details.cell(formatCoordinates(state.cell, locale)) }}
       </p>
     </header>
 
     <dl
-      class="divide-y divide-slate-200 rounded-md border border-slate-200 bg-slate-50 text-slate-900"
+      class="divide-y divide-slate-200 dark:divide-slate-700 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
     >
-      <StatRow label="Зараз" :value="formatDischarge(state.current)" unit="м³/с" />
       <StatRow
-        label="Норма на сьогодні"
-        :value="formatDischarge(state.norm?.median ?? null)"
-        unit="м³/с"
+        :label="t.details.now"
+        :value="formatDischarge(state.current, locale)"
+        :unit="t.dischargeUnit"
       />
-      <StatRow label="Відхилення" :value="formatPct(state.anomalyPct)">
+      <StatRow
+        :label="t.details.normToday"
+        :value="formatDischarge(state.norm?.median ?? null, locale)"
+        :unit="t.dischargeUnit"
+      />
+      <StatRow :label="t.details.deviation" :value="formatPct(state.anomalyPct, locale)">
         <AnomalyBadge v-if="state.anomalyClass" :anomaly-class="state.anomalyClass" />
       </StatRow>
     </dl>
 
     <section class="space-y-3" aria-labelledby="chart-heading">
-      <h3 id="chart-heading" class="text-sm font-semibold text-slate-900">
-        Витрати і прогноз GloFAS
+      <h3 id="chart-heading" class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        {{ t.details.chartHeading }}
       </h3>
       <ChartControls />
-      <p v-if="ui.mode === 'pct' && !norms" class="text-xs text-slate-600">
-        Норми не завантажилися — графік показано в м³/с.
+      <p v-if="ui.mode === 'pct' && !norms" class="text-xs text-slate-600 dark:text-slate-400">
+        {{ t.details.normsMissing }}
       </p>
       <LoadingSkeleton
         v-if="status === 'pending'"
-        label="Завантаження графіка…"
+        :label="t.details.loadingChart"
         class="h-[260px] lg:h-80"
       />
       <ErrorState v-else-if="status === 'error'" :message="errorMessage" @retry="$emit('retry')" />
@@ -126,13 +138,12 @@ onMounted(() => heading.value?.focus())
       />
       <div
         v-else
-        class="flex h-[260px] items-center justify-center rounded bg-slate-100 text-sm text-slate-500 lg:h-80"
+        class="flex h-[260px] items-center justify-center rounded bg-slate-100 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400 lg:h-80"
       >
-        Немає даних для графіка
+        {{ t.details.noChartData }}
       </div>
-      <p class="text-xs text-slate-500">
-        Прогноз — ансамбль GloFAS: медіана, міжквартильний діапазон (p25–p75) і повний розкид
-        (min–max). Норма — 1991–2020 для того самого дня року.
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        {{ t.details.chartNote }}
       </p>
     </section>
   </article>

@@ -22,6 +22,25 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <title>Річки України — стан і прогноз стоку</title>
+    <script>
+      // Applies the theme before first paint; src/composables/useTheme.ts takes over after mount.
+      ;(function () {
+        var stored = null
+        try {
+          stored = localStorage.getItem('theme')
+        } catch (e) {}
+        var dark =
+          stored === 'dark' ||
+          (stored !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.classList.add('dark')
+      })()
+      // Sets the page language before first paint; src/composables/useLocale.ts takes over after mount.
+      ;(function () {
+        try {
+          if (localStorage.getItem('lang') === 'en') document.documentElement.lang = 'en'
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

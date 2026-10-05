@@ -2,19 +2,21 @@ import type { AnomalyClass } from '../types'
 
 export interface AnomalyClassInfo {
   id: AnomalyClass
-  label: string
   /** ColorBrewer BrBG, colour-blind safe; `null` draws an outline only. */
   color: string | null
 }
 
-/** Ordered from driest to wettest, then no data; the legend and sorting follow this order. */
+/**
+ * Ordered from driest to wettest, then no data; the legend and sorting follow this order.
+ * Names live in the locale messages under `anomalyClasses`.
+ */
 export const ANOMALY_CLASSES: readonly AnomalyClassInfo[] = [
-  { id: 'very-low', label: 'Дуже низька водність', color: '#a6611a' },
-  { id: 'low', label: 'Низька водність', color: '#dfc27d' },
-  { id: 'normal', label: 'Близько до норми', color: '#c7c7c7' },
-  { id: 'high', label: 'Підвищена водність', color: '#80cdc1' },
-  { id: 'very-high', label: 'Висока водність', color: '#018571' },
-  { id: 'no-data', label: 'Немає даних', color: null },
+  { id: 'very-low', color: '#a6611a' },
+  { id: 'low', color: '#dfc27d' },
+  { id: 'normal', color: '#c7c7c7' },
+  { id: 'high', color: '#80cdc1' },
+  { id: 'very-high', color: '#018571' },
+  { id: 'no-data', color: null },
 ]
 
 export const ANOMALY_CLASS_INFO = Object.fromEntries(

@@ -1,0 +1,135 @@
+import type { AnomalyClass, BasinId } from '../types'
+
+/** Ukrainian UI copy; the source of truth for the `Messages` shape every locale fills. */
+export const uk = {
+  /** Value of the `lang` attribute and the BCP 47 tag for `Intl`. */
+  htmlLang: 'uk',
+  documentTitle: 'Річки України — стан і прогноз стоку',
+  documentDescription:
+    'Стан водності великих річок України відносно норми 1991–2020 і ансамблевий прогноз стоку GloFAS.',
+
+  header: {
+    title: 'Річки України',
+    titleSuffix: ' — стан і прогноз стоку',
+    subtitleShort: 'Стан і прогноз стоку',
+    subtitleLong: 'Модельні витрати води GloFAS, норма 1991–2020',
+    stations: 'Станції',
+    showStations: 'Показати список станцій',
+    hideStations: 'Сховати список станцій',
+  },
+  theme: {
+    label: 'Тема',
+    menuLabel: 'Тема оформлення',
+    auto: 'Авто',
+    light: 'Світла',
+    dark: 'Темна',
+  },
+  language: {
+    label: 'Мова',
+    menuLabel: 'Мова інтерфейсу',
+  },
+  footer: {
+    dataSource: 'Дані: GloFAS (Copernicus Emergency Management Service) via',
+    modelled: 'Модельні дані.',
+    about: 'Про дані та методику',
+  },
+  about: {
+    heading: 'Про дані',
+    close: 'Закрити',
+    sourceHeading: 'Звідки дані',
+    normHeading: 'Як рахується норма',
+    stateHeading: 'Як визначається стан',
+    stateColumn: 'Стан',
+    ruleColumn: 'Умова',
+    noDataRule: 'значення на сьогодні немає',
+    limitsHeading: 'Обмеження',
+    limits: [
+      'Маркер на карті стоїть на річці, а дані відповідають центру комірки GloFAS.',
+      'Поточні значення беруться з оперативного прогнозу, а норма — з реаналізу, тож порівняння з нормою наближене.',
+    ],
+  },
+  home: {
+    map: 'Карта',
+    station: 'Станція',
+    loadingStation: 'Завантаження станції…',
+    pickStation: 'Оберіть станцію на карті',
+    stationList: 'Список станцій',
+  },
+  errors: {
+    retry: 'Спробувати ще',
+    rateLimited: 'Ліміт запитів до Open-Meteo вичерпано. Спробуйте пізніше.',
+    loadFailed: 'Не вдалося завантажити дані Open-Meteo.',
+    snapshotRateLimited: 'ліміт запитів до Open-Meteo вичерпано',
+    snapshotUnavailable: 'Open-Meteo недоступний',
+    snapshotNotice: (cause: string, date: string) =>
+      `Зараз ${cause} — показано збережені дані від ${date}`,
+  },
+  panel: {
+    heading: 'Станції',
+    closeStations: 'Закрити список станцій',
+    normsFailed: 'Норми не завантажилися — відхилення і стан водності недоступні.',
+    loading: 'Завантаження даних…',
+    basin: 'Басейн',
+    allBasins: 'Усі',
+    sortBy: 'Сортувати за',
+    sort: { pct: '% від норми', current: 'витратою', class: 'станом', name: 'назвою' },
+    ascending: 'За зростанням',
+    descending: 'За спаданням',
+    listLabel: 'Станції та стан водності на сьогодні',
+    unknownState: 'Стан невідомий',
+    focusBasin: 'фокусний басейн',
+  },
+  details: {
+    close: 'Закрити станцію',
+    basin: (name: string) => `Басейн: ${name}`,
+    cell: (coordinates: string) => `Комірка GloFAS: ${coordinates}`,
+    now: 'Зараз',
+    normToday: 'Норма на сьогодні',
+    deviation: 'Відхилення',
+    chartHeading: 'Витрати і прогноз GloFAS',
+    normsMissing: 'Норми не завантажилися — графік показано в м³/с.',
+    loadingChart: 'Завантаження графіка…',
+    noChartData: 'Немає даних для графіка',
+    chartNote:
+      'Прогноз — ансамбль GloFAS: медіана, міжквартильний діапазон (p25–p75) і повний розкид (min–max). Норма — 1991–2020 для того самого дня року.',
+  },
+  chart: {
+    rangeLabel: 'Горизонт прогнозу',
+    ranges: { 30: '30 днів', 90: '3 місяці', 210: '7 місяців' },
+    modeLabel: 'Одиниці графіка',
+    pctOfNorm: '% від норми',
+    normBand: 'Норма p25–p75',
+    forecastSpread: 'Прогноз min–max',
+    forecastIqr: 'Прогноз p25–p75',
+    normRelative: 'Норма (100%)',
+    normMedian: 'Норма (медіана)',
+    forecastMedian: 'Прогноз (медіана ансамблю)',
+    past: 'Минулі значення (модель)',
+    dischargeAxis: 'Витрата води, м³/с',
+    today: 'Сьогодні',
+    ariaLabel: 'Графік витрат води: минулі значення, прогноз ансамблю і норма',
+  },
+  map: {
+    ariaLabel: 'Карта станцій: колір маркера — стан водності',
+    legendTitle: 'Водність відносно норми',
+  },
+  /** m³/s; also the chart's absolute mode label. */
+  dischargeUnit: 'м³/с',
+  basins: {
+    dnipro: 'Дніпро',
+    dnister: 'Дністер',
+    danube: 'Дунай',
+    'pivdennyi-buh': 'Південний Буг',
+    don: 'Дон',
+  } satisfies Record<BasinId, string>,
+  anomalyClasses: {
+    'very-low': 'Дуже низька водність',
+    low: 'Низька водність',
+    normal: 'Близько до норми',
+    high: 'Підвищена водність',
+    'very-high': 'Висока водність',
+    'no-data': 'Немає даних',
+  } satisfies Record<AnomalyClass, string>,
+}
+
+export type Messages = typeof uk

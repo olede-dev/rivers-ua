@@ -1,51 +1,78 @@
+import type { Locale } from '../i18n'
 import type { Coordinates } from '../types'
 import { assertDate } from './dates'
 
-const LOCALE = 'uk-UA'
+/** Regional variants for `Intl`: uk-UA groups with a space and a decimal comma, en-GB writes `5 October`. */
+const INTL_LOCALES: Record<Locale, string> = { uk: 'uk-UA', en: 'en-GB' }
 const MINUS = '−'
 
-const largeNumber = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 })
-const smallNumber = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 })
+interface Formatters {
+  largeNumber: Intl.NumberFormat
+  smallNumber: Intl.NumberFormat
+  coordinate: Intl.NumberFormat
+  plainDate: Intl.DateTimeFormat
+}
+
+const cache = new Map<Locale, Formatters>()
+
+/** `Intl` formatters are costly to build, so each locale gets one set. */
+function formatters(locale: Locale): Formatters {
+  let set = cache.get(locale)
+  if (!set) {
+    const tag = INTL_LOCALES[locale]
+    set = {
+      largeNumber: new Intl.NumberFormat(tag, { maximumFractionDigits: 0 }),
+      smallNumber: new Intl.NumberFormat(tag, { maximumFractionDigits: 1 }),
+      coordinate: new Intl.NumberFormat(tag, {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3,
+      }),
+      plainDate: new Intl.DateTimeFormat(tag, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }),
+    }
+    cache.set(locale, set)
+  }
+  return set
+}
 
 /** Discharge in m³/s without the unit: whole numbers from 10 up, one decimal below. */
-export function formatDischarge(value: number | null): string {
+export function formatDischarge(value: number | null, locale: Locale = 'uk'): string {
   if (value === null) return '—'
+  const { largeNumber, smallNumber } = formatters(locale)
   return (Math.abs(value) >= 10 ? largeNumber : smallNumber).format(value)
 }
 
 /** Signed percent with a typographic minus: `+12%`, `−35%`, `0%`. */
-export function formatPct(value: number | null): string {
+export function formatPct(value: number | null, locale: Locale = 'uk'): string {
   if (value === null) return '—'
   const sign = value > 0 ? '+' : value < 0 ? MINUS : ''
-  return `${sign}${largeNumber.format(Math.abs(value))}%`
+  return `${sign}${formatters(locale).largeNumber.format(Math.abs(value))}%`
 }
 
 /** Share of the norm, unsigned and whole: `115%`. */
-export function formatPctOfNorm(value: number | null): string {
+export function formatPctOfNorm(value: number | null, locale: Locale = 'uk'): string {
   if (value === null) return '—'
-  return `${largeNumber.format(value)}%`
+  return `${formatters(locale).largeNumber.format(value)}%`
 }
 
-const coordinate = new Intl.NumberFormat(LOCALE, {
-  minimumFractionDigits: 3,
-  maximumFractionDigits: 3,
-})
-
-/** Geographic position with hemispheres in Ukrainian: `50,475° пн. ш., 30,525° сх. д.`. */
-export function formatCoordinates({ lat, lon }: Coordinates): string {
-  const latitude = `${coordinate.format(Math.abs(lat))}° ${lat < 0 ? 'пд.' : 'пн.'} ш.`
-  const longitude = `${coordinate.format(Math.abs(lon))}° ${lon < 0 ? 'зх.' : 'сх.'} д.`
-  return `${latitude}, ${longitude}`
+/**
+ * Geographic position with hemispheres: `50,475° пн. ш., 30,525° сх. д.` in Ukrainian,
+ * `50.475° N, 30.525° E` in English.
+ */
+export function formatCoordinates({ lat, lon }: Coordinates, locale: Locale = 'uk'): string {
+  const { coordinate } = formatters(locale)
+  const latValue = `${coordinate.format(Math.abs(lat))}°`
+  const lonValue = `${coordinate.format(Math.abs(lon))}°`
+  if (locale === 'en')
+    return `${latValue} ${lat < 0 ? 'S' : 'N'}, ${lonValue} ${lon < 0 ? 'W' : 'E'}`
+  return `${latValue} ${lat < 0 ? 'пд.' : 'пн.'} ш., ${lonValue} ${lon < 0 ? 'зх.' : 'сх.'} д.`
 }
 
-const plainDate = new Intl.DateTimeFormat(LOCALE, {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-/** Calendar date for reading: `2026-10-05` → `5 жовтня 2026 р.`. */
-export function formatPlainDate(date: string): string {
-  return plainDate.format(new Date(`${assertDate(date)}T00:00:00Z`))
+/** Calendar date for reading: `2026-10-05` → `5 жовтня 2026 р.` / `5 October 2026`. */
+export function formatPlainDate(date: string, locale: Locale = 'uk'): string {
+  return formatters(locale).plainDate.format(new Date(`${assertDate(date)}T00:00:00Z`))
 }

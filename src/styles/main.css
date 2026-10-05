@@ -1,5 +1,61 @@
 @import 'tailwindcss';
 
+/* Dark mode follows the `dark` class on <html>, set by useTheme (and index.html before paint). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  color-scheme: dark;
+}
+
+/* Tailwind v4 preflight leaves buttons with the default cursor; restore the pointer. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary {
+    cursor: pointer;
+  }
+}
+
+/* Leaflet's own controls and tooltips are styled for a light page. */
+.dark .leaflet-container {
+  background: var(--color-slate-900);
+}
+
+.dark .leaflet-bar a,
+.dark .leaflet-bar a:hover {
+  border-bottom-color: var(--color-slate-700);
+  background-color: var(--color-slate-800);
+  color: var(--color-slate-100);
+}
+
+.dark .leaflet-bar a:hover {
+  background-color: var(--color-slate-700);
+}
+
+.dark .leaflet-bar a.leaflet-disabled {
+  background-color: var(--color-slate-900);
+  color: var(--color-slate-600);
+}
+
+.dark .leaflet-control-attribution {
+  background: rgb(15 23 42 / 0.8);
+  color: var(--color-slate-300);
+}
+
+.dark .leaflet-control-attribution a {
+  color: var(--color-sky-300);
+}
+
+.dark .leaflet-tooltip {
+  border-color: var(--color-slate-700);
+  background: var(--color-slate-800);
+  color: var(--color-slate-100);
+}
+
+.dark .leaflet-tooltip-top::before {
+  border-top-color: var(--color-slate-800);
+}
+
 /* On narrow maps the attribution wraps across the full width and hides the bottom-left legend. */
 @media (width < 640px) {
   .leaflet-control-attribution {

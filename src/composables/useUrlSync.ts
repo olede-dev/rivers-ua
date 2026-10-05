@@ -1,12 +1,12 @@
 import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { BASINS } from '../config/basins'
+import { BASIN_IDS } from '../config/basins'
 import { STATIONS } from '../config/stations'
 import { parseUrlState, toUrlQuery } from '../lib/urlState'
 import { useUiStore } from '../stores/ui'
 
-const known = { stationIds: STATIONS.map((s) => s.id), basinIds: BASINS.map((b) => b.id) }
+const known = { stationIds: STATIONS.map((s) => s.id), basinIds: BASIN_IDS }
 
 const sameQuery = (a: Record<string, unknown>, b: Record<string, unknown>) =>
   JSON.stringify(a) === JSON.stringify(b)

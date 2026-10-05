@@ -11,18 +11,18 @@ const model = defineModel<T>({ required: true })
   <div
     role="group"
     :aria-label="label"
-    class="inline-flex rounded-md border border-slate-300 bg-slate-50 p-0.5"
+    class="inline-flex rounded-md border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-0.5"
   >
     <button
       v-for="option in options"
       :key="option.value"
       type="button"
       :aria-pressed="model === option.value"
-      class="rounded px-2.5 py-1 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-sky-700"
+      class="rounded px-2.5 py-1 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
       :class="
         model === option.value
-          ? 'bg-sky-800 text-white shadow-sm'
-          : 'text-slate-700 hover:bg-white hover:text-slate-900'
+          ? 'bg-sky-800 dark:bg-sky-700 text-white shadow-sm'
+          : 'text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
       "
       @click="model = option.value"
     >

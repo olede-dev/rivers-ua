@@ -4,8 +4,11 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 
+import { useLocale } from '../../composables/useLocale'
 import { useRivers, useUkraineBorder } from '../../composables/useMapGeo'
+import { useTheme } from '../../composables/useTheme'
 import { ANOMALY_CLASS_INFO, NO_DATA_STROKE } from '../../config/anomalyClasses'
+import { stationName } from '../../i18n'
 import { formatDischarge, formatPct } from '../../lib/format'
 import { useUiStore } from '../../stores/ui'
 import type { StationState } from '../../types'
@@ -18,7 +21,7 @@ import {
   restyleRivers,
   RIVERS_PANE,
 } from './geoLayers'
-import { createMapLegend } from './MapLegend'
+import { createMapLegend, type MapLegend } from './MapLegend'
 
 const props = defineProps<{
   states: readonly StationState[]
@@ -31,13 +34,19 @@ const UKRAINE_BOUNDS: L.LatLngBoundsExpression = [
   [52.5, 40.3],
 ]
 const SELECTED_ZOOM = 8
-const SELECTED_STROKE = '#0f172a'
+/** Marker outlines: a ring in the basemap's tone, and a contrasting one for the selection. */
+const MARKER_STROKES = {
+  light: { ring: '#ffffff', selected: '#0f172a' },
+  dark: { ring: '#0f172a', selected: '#ffffff' },
+}
 /** Fill when norms are unavailable and no class can be assigned. */
 const UNCLASSIFIED_FILL = '#94a3b8'
 
 const ui = useUiStore()
 const rivers = useRivers()
 const border = useUkraineBorder()
+const { isDark } = useTheme()
+const { locale, t } = useLocale()
 const container = useTemplateRef<HTMLDivElement>('container')
 
 // Leaflet objects stay outside Vue reactivity: proxies break them.
@@ -48,6 +57,8 @@ let viewTouched = false
 const markers = new Map<string, L.CircleMarker>()
 let riversLayer: L.GeoJSON | undefined
 let borderLayer: L.LayerGroup | undefined
+let setBasemapTheme: ((dark: boolean) => void) | undefined
+let legend: MapLegend | undefined
 
 /**
  * Leaflet's SVG renderer only CSS-scales its layer on each `zoom` event and redraws on
@@ -75,15 +86,20 @@ function markerStyle(state: StationState, selected: boolean): L.CircleMarkerOpti
   const color = state.anomalyClass
     ? ANOMALY_CLASS_INFO[state.anomalyClass].color
     : UNCLASSIFIED_FILL
+  const strokes = isDark.value ? MARKER_STROKES.dark : MARKER_STROKES.light
   const base = color
-    ? { fillColor: color, fillOpacity: 0.95, color: '#fff', weight: 1.5 }
+    ? { fillColor: color, fillOpacity: 0.95, color: strokes.ring, weight: 1.5 }
     : { fillOpacity: 0, color: NO_DATA_STROKE, weight: 2 }
-  return selected ? { ...base, color: SELECTED_STROKE, weight: 3 } : base
+  return selected ? { ...base, color: strokes.selected, weight: 3 } : base
 }
 
 function tooltipText({ station, current, anomalyPct }: StationState): string {
-  const parts = [`${station.river} — ${station.place}`, `${formatDischarge(current)} м³/с`]
-  if (anomalyPct !== null) parts.push(formatPct(anomalyPct))
+  const { river, place } = stationName(station, locale.value)
+  const parts = [
+    `${river} — ${place}`,
+    `${formatDischarge(current, locale.value)} ${t.value.dischargeUnit}`,
+  ]
+  if (anomalyPct !== null) parts.push(formatPct(anomalyPct, locale.value))
   return parts.join(' · ')
 }
 
@@ -112,14 +128,33 @@ function syncMarkers() {
 function syncGeoLayers() {
   if (!map) return
   if (!riversLayer && rivers.data.value) {
-    riversLayer = createRiversLayer(rivers.data.value, new FixedSizeSvg({ pane: RIVERS_PANE }))
+    riversLayer = createRiversLayer(
+      rivers.data.value,
+      new FixedSizeSvg({ pane: RIVERS_PANE }),
+      isDark.value,
+    )
     restyleRivers(riversLayer, map.getZoom())
     riversLayer.addTo(map)
   }
   if (!borderLayer && border.data.value) {
-    borderLayer = createBorderLayer(border.data.value, new FixedSizeSvg({ pane: BORDER_PANE }))
+    borderLayer = createBorderLayer(
+      border.data.value,
+      new FixedSizeSvg({ pane: BORDER_PANE }),
+      isDark.value,
+    )
     borderLayer.addTo(map)
   }
+}
+
+/** Basemap tiles and geo layer colours follow the theme; markers restyle in `syncMarkers`. */
+function applyTheme(dark: boolean) {
+  setBasemapTheme?.(dark)
+  riversLayer?.remove()
+  borderLayer?.remove()
+  riversLayer = undefined
+  borderLayer = undefined
+  syncGeoLayers()
+  syncMarkers()
 }
 
 function prefersReducedMotion(): boolean {
@@ -150,13 +185,14 @@ function resetView() {
 onMounted(() => {
   if (!container.value) return
   map = L.map(container.value, { minZoom: 4, zoomSnap: 0.25, renderer: new FixedSizeSvg() })
-  addBasemap(map)
+  setBasemapTheme = addBasemap(map, isDark.value)
   createGeoPanes(map)
   resetView()
   map.on('zoomend', () => {
     if (map && riversLayer) restyleRivers(riversLayer, map.getZoom())
   })
-  createMapLegend().addTo(map)
+  legend = createMapLegend(t.value)
+  legend.control.addTo(map)
 
   // A container measured while hidden or mid-layout gives a wrong initial view; reset it on resize.
   const markTouched = () => (viewTouched = true)
@@ -180,18 +216,17 @@ onBeforeUnmount(() => {
   markers.clear()
   riversLayer = undefined
   borderLayer = undefined
+  setBasemapTheme = undefined
+  legend = undefined
 })
 
-watch(() => [props.states, props.showMarkers, ui.basin, ui.selectedId], syncMarkers)
+watch(() => [props.states, props.showMarkers, ui.basin, ui.selectedId, locale.value], syncMarkers)
 watch(() => ui.selectedId, focusSelection)
 watch(() => [rivers.data.value, border.data.value], syncGeoLayers)
+watch(isDark, applyTheme)
+watch(t, (messages) => legend?.setMessages(messages))
 </script>
 
 <template>
-  <div
-    ref="container"
-    class="size-full"
-    role="region"
-    aria-label="Карта станцій: колір маркера — стан водності"
-  ></div>
+  <div ref="container" class="size-full" role="region" :aria-label="t.map.ariaLabel"></div>
 </template>

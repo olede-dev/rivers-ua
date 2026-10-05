@@ -13,6 +13,6 @@ export const STATIONS: readonly Station[] = STATION_SEEDS.map((seed) => {
       `Station ${seed.id} has no validated coordinates; run npm run validate:stations`,
     )
   }
-  const { id, river, place, basin, focus, marker } = seed
-  return { id, river, place, basin, focus, marker, lat: coordinates.lat, lon: coordinates.lon }
+  const { id, river, place, en, basin, focus, marker } = seed
+  return { id, river, place, en, basin, focus, marker, lat: coordinates.lat, lon: coordinates.lon }
 })
