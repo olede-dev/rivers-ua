@@ -34,8 +34,11 @@ import {
   createStationAnimator,
   setStationData,
   setStationFilters,
+  markerRadius,
+  selectedStroke,
   setStationMarks,
   STATION_LAYERS,
+  type StationOverlay,
   stationFeatures,
   STATIONS_BOTTOM_LAYER,
 } from './stationLayers'
@@ -126,14 +129,39 @@ function syncTooltip() {
   if (!popup.isOpen()) popup.addTo(map)
 }
 
+function overlayOf({ station, meanAnnual }: StationState): StationOverlay | null {
+  const fill = markOf(station.id).fill
+  if (fill === null) return null
+  return {
+    id: station.id,
+    lngLat: [station.marker.lon, station.marker.lat],
+    radius: markerRadius(meanAnnual),
+    fill,
+  }
+}
+
+/** Station data and marks; reloads the source only when the stations themselves change. */
 function syncMarkers() {
   if (!map || !layersReady()) return
   const states = props.showMarkers ? props.states : []
   setStationData(map, stationFeatures(states))
   setStationMarks(map, props.showMarkers ? props.marks : new Map())
+  syncFilters()
+}
+
+/** Basin and selection only filter layers and pick the pulsing rings. */
+function syncFilters() {
+  if (!map || !layersReady()) return
   setStationFilters(map, ui.basin, ui.selectedId)
-  animator?.setPulsing(props.showMarkers && visibleStates().some((s) => markOf(s.station.id).pulse))
+  const pulsing = props.showMarkers ? visibleStates().filter((s) => markOf(s.station.id).pulse) : []
+  animator?.setPulsing(pulsing.map(overlayOf).filter((o) => o !== null))
   syncTooltip()
+}
+
+function popSelected(id: string) {
+  const state = props.states.find((s) => s.station.id === id)
+  const overlay = state && props.showMarkers ? overlayOf(state) : null
+  if (overlay) animator?.pop(overlay, selectedStroke(isDark.value))
 }
 
 /** No tints until markers show, so rivers do not flash colours before data arrives. */
@@ -207,6 +235,8 @@ function selectedPosition(id: string | null): LngLatLike | null {
 
 function focusSelection(id: string | null) {
   if (!map) return
+  // Opening or closing the panel resizes the container in the same tick; measure it first.
+  map.resize()
   const animate = !prefersReducedMotion()
   const position = selectedPosition(id)
   if (position) map.flyTo({ center: position, zoom: SELECTED_ZOOM, animate })
@@ -242,6 +272,8 @@ onMounted(() => {
     bounds: UKRAINE_BOUNDS,
     minZoom: 3,
     renderWorldCopies: false,
+    // Phones with 3x screens would fill 2.25x the pixels of 2x for no visible gain.
+    pixelRatio: Math.min(window.devicePixelRatio, 2),
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,
@@ -293,17 +325,16 @@ onBeforeUnmount(() => {
   animator = undefined
 })
 
-watch(
-  () => [props.states, props.marks, props.showMarkers, ui.basin, ui.selectedId, locale.value],
-  syncMarkers,
-)
+watch(() => [props.states, props.marks, props.showMarkers], syncMarkers)
+watch(() => [ui.basin, ui.selectedId, locale.value], syncFilters)
 watch(
   () => ui.selectedId,
   (id) => {
     focusSelection(id)
     syncRiverFocus()
-    if (id !== null) animator?.pop()
+    if (id !== null) popSelected(id)
   },
+  { flush: 'post' },
 )
 watch(
   () => [props.states, props.marks, props.showMarkers],

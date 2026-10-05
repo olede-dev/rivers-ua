@@ -73,6 +73,54 @@
   border-bottom-color: var(--color-slate-800);
 }
 
+/* Map marker overlays (stationLayers.ts): CSS animation keeps the WebGL map idle.
+   MapLibre moves the wrapper by its transform; these are the inner boxes. */
+.station-pulse,
+.station-pop {
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.station-pulse {
+  box-shadow: 0 0 0 2.5px var(--fill);
+  animation: station-pulse 2200ms cubic-bezier(0.33, 1, 0.68, 1) infinite;
+}
+
+@keyframes station-pulse {
+  from {
+    scale: 1;
+    opacity: 0.9;
+  }
+  to {
+    scale: 2.8;
+    opacity: 0;
+  }
+}
+
+.station-pop {
+  background: var(--fill);
+  box-shadow: 0 0 0 3px var(--stroke);
+  animation: station-pop ease-out forwards;
+}
+
+@keyframes station-pop {
+  40% {
+    scale: 1.6;
+  }
+  to {
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-pulse,
+  .station-pop {
+    display: none;
+  }
+}
+
 /* The stations drawer slides in from the right edge on narrow screens. */
 .drawer[open] {
   animation: drawer-in 200ms ease-out;

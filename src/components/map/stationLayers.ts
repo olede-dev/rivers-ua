@@ -1,4 +1,9 @@
-import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
+import {
+  Marker,
+  type ExpressionSpecification,
+  type GeoJSONSource,
+  type Map as MapLibreMap,
+} from 'maplibre-gl'
 
 import { NO_DATA_STROKE } from '../../config/anomalyClasses'
 import type { StationState } from '../../types'
@@ -6,7 +11,7 @@ import type { MapMark } from './mapMarks'
 
 const STATIONS_SOURCE = 'stations'
 /** Bottom marker layer; geo layers are added under it. */
-export const STATIONS_BOTTOM_LAYER = 'station-pulse'
+export const STATIONS_BOTTOM_LAYER = 'stations'
 /** Layers the pointer can hit; the selected copy is drawn over the rest. */
 export const STATION_LAYERS = ['stations', 'station-selected']
 
@@ -15,12 +20,14 @@ const MARKER_STROKES = {
   light: { ring: '#ffffff', selected: '#0f172a' },
   dark: { ring: '#0f172a', selected: '#ffffff' },
 }
-/** Strongly anomalous stations: a ring that grows and fades behind the marker. */
-const PULSE = { periodMs: 2200, maxScale: 2.8, opacity: 0.9 }
-/** A one-off pop when a station is selected: it peaks at 40% of the duration. */
-const POP = { durationMs: 600, peak: 0.4, scale: 1.6 }
+/** A one-off pop when a station is selected; the keyframes live in main.css. */
+const POP = { durationMs: 600 }
+/** Selection outline, for the pop overlay that mirrors the selected marker. */
+export function selectedStroke(dark: boolean): string {
+  return (dark ? MARKER_STROKES.dark : MARKER_STROKES.light).selected
+}
 
-function markerRadius(meanAnnual: number | null): number {
+export function markerRadius(meanAnnual: number | null): number {
   if (meanAnnual === null || meanAnnual <= 0) return 8
   return Math.min(16, Math.max(6, 5 + 2.5 * Math.log10(meanAnnual)))
 }
@@ -52,25 +59,10 @@ export function addStationLayers(
 ): void {
   const strokes = dark ? MARKER_STROKES.dark : MARKER_STROKES.light
   map.addSource(STATIONS_SOURCE, { type: 'geojson', data, promoteId: 'id' })
-  map.addLayer({
-    id: STATIONS_BOTTOM_LAYER,
-    type: 'circle',
-    source: STATIONS_SOURCE,
-    paint: {
-      'circle-color': 'rgba(0,0,0,0)',
-      'circle-stroke-color': FILL,
-      'circle-stroke-width': 2.5,
-      'circle-stroke-opacity': 0,
-      'circle-radius': RADIUS,
-      'circle-radius-transition': { duration: 0 },
-      'circle-stroke-opacity-transition': { duration: 0 },
-    },
-  })
   const paint = {
     'circle-color': FILL,
     'circle-opacity': 0.95,
     'circle-radius': RADIUS,
-    'circle-radius-transition': { duration: 0 },
   }
   map.addLayer({
     id: 'stations',
@@ -121,71 +113,71 @@ export function setStationFilters(
   map.setFilter('station-selected', ['all', inBasin, ['==', ['get', 'id'], selectedId ?? '']])
 }
 
+/** A station drawn by an HTML overlay: CSS animates it without redrawing the map. */
+export interface StationOverlay {
+  id: string
+  lngLat: [number, number]
+  radius: number
+  fill: string
+}
+
+/** MapLibre positions the outer box by its transform, so CSS animates the inner one. */
+function overlayElement(className: string, { radius, fill }: StationOverlay): HTMLDivElement {
+  const element = document.createElement('div')
+  const inner = document.createElement('div')
+  inner.className = className
+  inner.style.setProperty('--size', `${2 * radius}px`)
+  inner.style.setProperty('--fill', fill)
+  element.append(inner)
+  return element
+}
+
 /**
- * Drives the pulse rings and the selection pop frame by frame through paint properties.
- * Frames run only while a pulse or a pop is visible, and never under reduced motion.
+ * Pulse rings and the selection pop as CSS-animated HTML markers. Animating paint
+ * properties instead restyles and redraws the whole map every frame, which stalls weak GPUs.
  */
 export function createStationAnimator(map: MapLibreMap, reducedMotion: () => boolean) {
-  let frame = 0
-  let pulsing = false
-  let popStart: number | null = null
+  const rings = new Map<string, { marker: Marker; key: string }>()
+  let popMarker: Marker | null = null
 
-  function pulseAt(now: number) {
-    const t = (now % PULSE.periodMs) / PULSE.periodMs
-    const eased = 1 - (1 - t) ** 2
-    map.setPaintProperty('station-pulse', 'circle-radius', [
-      '*',
-      RADIUS,
-      1 + (PULSE.maxScale - 1) * eased,
-    ])
-    map.setPaintProperty('station-pulse', 'circle-stroke-opacity', [
-      'case',
-      ['boolean', ['feature-state', 'pulse'], false],
-      PULSE.opacity * (1 - eased),
-      0,
-    ])
-  }
-
-  function popAt(now: number): boolean {
-    if (popStart === null) return false
-    const t = Math.min(1, (now - popStart) / POP.durationMs)
-    const up = t < POP.peak ? t / POP.peak : 1 - (t - POP.peak) / (1 - POP.peak)
-    const scale = 1 + (POP.scale - 1) * (1 - (1 - up) ** 2)
-    map.setPaintProperty('station-selected', 'circle-radius', ['*', RADIUS, scale])
-    if (t < 1) return true
-    popStart = null
-    return false
-  }
-
-  function tick(now: number) {
-    frame = 0
-    if (!map.getLayer('stations')) return
-    const popping = popAt(now)
-    if (pulsing) pulseAt(now)
-    if (pulsing || popping) frame = requestAnimationFrame(tick)
-  }
-
-  function run() {
-    if (frame === 0) frame = requestAnimationFrame(tick)
+  function clearPop() {
+    popMarker?.remove()
+    popMarker = null
   }
 
   return {
-    /** Whether any visible station pulses; hides the rings when none does. */
-    setPulsing(value: boolean) {
-      pulsing = value && !reducedMotion()
-      if (pulsing) run()
-      else if (map.getLayer('station-pulse')) {
-        map.setPaintProperty('station-pulse', 'circle-stroke-opacity', 0)
+    /** Rings behind the given stations; others lose theirs. */
+    setPulsing(stations: readonly StationOverlay[]) {
+      const next = new Map((reducedMotion() ? [] : stations).map((s) => [s.id, s] as const))
+      for (const [id, ring] of rings) {
+        const station = next.get(id)
+        if (station && ring.key === `${station.fill}|${station.radius}`) next.delete(id)
+        else {
+          ring.marker.remove()
+          rings.delete(id)
+        }
+      }
+      for (const station of next.values()) {
+        const marker = new Marker({ element: overlayElement('station-pulse', station) })
+          .setLngLat(station.lngLat)
+          .addTo(map)
+        rings.set(station.id, { marker, key: `${station.fill}|${station.radius}` })
       }
     },
-    pop() {
+    pop(station: StationOverlay, stroke: string) {
+      clearPop()
       if (reducedMotion()) return
-      popStart = performance.now()
-      run()
+      const element = overlayElement('station-pop', station)
+      const inner = element.firstElementChild as HTMLElement
+      inner.style.setProperty('--stroke', stroke)
+      inner.style.animationDuration = `${POP.durationMs}ms`
+      inner.addEventListener('animationend', clearPop, { once: true })
+      popMarker = new Marker({ element }).setLngLat(station.lngLat).addTo(map)
     },
     stop() {
-      cancelAnimationFrame(frame)
-      frame = 0
+      for (const ring of rings.values()) ring.marker.remove()
+      rings.clear()
+      clearPop()
     },
   }
 }
