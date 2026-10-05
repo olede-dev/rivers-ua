@@ -10,6 +10,17 @@ const CARTO_KEY = 'cb1_4a4l_1_48d5c1569ad39b00ae334548'
 const ESRI_CANVAS_URL = (style: string) =>
   `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${style}/MapServer/tile/{z}/{y}/{x}`
 
+/** Shaded relief between the basemap and the rivers; blended in main.css (`.leaflet-relief-pane`). */
+export const RELIEF_PANE = 'relief'
+
+function relief(dark: boolean): L.TileLayer {
+  const style = dark ? 'World_Hillshade_Dark' : 'World_Hillshade'
+  return L.tileLayer(
+    `https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/${style}/MapServer/tile/{z}/{y}/{x}`,
+    { attribution: 'Relief © Esri', maxZoom: 16, pane: RELIEF_PANE, opacity: dark ? 0.35 : 0.4 },
+  )
+}
+
 /** CARTO Positron for the light theme, Dark Matter for the dark one. */
 function carto(dark: boolean): L.TileLayer {
   const style = dark ? 'dark_all' : 'light_all'
@@ -36,9 +47,13 @@ function esriCanvas(dark: boolean): L.TileLayer {
 export function addBasemap(map: L.Map, dark: boolean): (dark: boolean) => void {
   let cartoFailed = false
   let current: L.TileLayer | undefined
+  let shade: L.TileLayer | undefined
+  map.createPane(RELIEF_PANE).style.zIndex = '250'
 
   function show(dark: boolean) {
     current?.remove()
+    shade?.remove()
+    shade = relief(dark).addTo(map)
     if (cartoFailed) {
       current = esriCanvas(dark).addTo(map)
       return

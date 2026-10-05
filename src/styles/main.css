@@ -85,3 +85,64 @@
     animation: none;
   }
 }
+
+/* Shaded relief darkens the light basemap and lightens the dark one. */
+.leaflet-relief-pane {
+  mix-blend-mode: multiply;
+}
+
+.dark .leaflet-relief-pane {
+  mix-blend-mode: screen;
+}
+
+/* Strongly anomalous stations: a ring that grows and fades behind the marker. */
+.marker-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: marker-pulse 2.2s ease-out infinite;
+}
+
+@keyframes marker-pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+/* Dots drifting downstream along every river; the dash period is 11 (`1 10`). */
+.river-flow {
+  animation: river-flow linear infinite;
+}
+
+.river-flow--slow {
+  animation-duration: 2.4s;
+}
+
+.river-flow--medium {
+  animation-duration: 1.4s;
+}
+
+.river-flow--fast {
+  animation-duration: 0.8s;
+}
+
+@keyframes river-flow {
+  to {
+    stroke-dashoffset: -11;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marker-pulse,
+  .river-flow {
+    animation: none;
+  }
+
+  .marker-pulse {
+    opacity: 0;
+  }
+}

@@ -18,8 +18,9 @@ import {
   createBorderLayer,
   createGeoPanes,
   createRiversLayer,
-  restyleRivers,
+  flowSignature,
   RIVERS_PANE,
+  styleRivers,
 } from './geoLayers'
 import { createMapLegend, type MapLegend } from './MapLegend'
 
@@ -55,7 +56,13 @@ let resizeObserver: ResizeObserver | undefined
 /** Set once the user pans or zooms; until then a resize restores the initial view. */
 let viewTouched = false
 const markers = new Map<string, L.CircleMarker>()
-let riversLayer: L.GeoJSON | undefined
+/** Expanding rings behind strongly anomalous stations; see `.marker-pulse` in main.css. */
+const pulses = new Map<string, L.CircleMarker>()
+/** Deviation from the median norm, in percent, from which a station pulses. */
+const PULSE_PCT = 50
+let riversLayer: L.FeatureGroup | undefined
+/** Flow speeds the river paths were built with; other state changes only restyle them. */
+let riversFlow: string | undefined
 let borderLayer: L.LayerGroup | undefined
 let setBasemapTheme: ((dark: boolean) => void) | undefined
 let legend: MapLegend | undefined
@@ -103,6 +110,29 @@ function tooltipText({ station, current, anomalyPct }: StationState): string {
   return parts.join(' · ')
 }
 
+function syncPulse(state: StationState, visible: boolean) {
+  const { id, marker: position } = state.station
+  const color = state.anomalyClass ? ANOMALY_CLASS_INFO[state.anomalyClass].color : null
+  const strong =
+    color !== null && state.anomalyPct !== null && Math.abs(state.anomalyPct) >= PULSE_PCT
+  let pulse = pulses.get(id)
+  if (!strong || !visible) {
+    pulse?.remove()
+    return
+  }
+  if (!pulse) {
+    pulse = L.circleMarker([position.lat, position.lon], {
+      className: 'marker-pulse',
+      interactive: false,
+      fill: false,
+    })
+    pulses.set(id, pulse)
+  }
+  pulse.setStyle({ color, weight: 2.5, opacity: 0.9 })
+  pulse.setRadius(markerRadius(state.meanAnnual))
+  if (map && !map.hasLayer(pulse)) pulse.addTo(map).bringToBack()
+}
+
 function syncMarkers() {
   if (!map || !props.showMarkers) return
   for (const state of props.states) {
@@ -122,20 +152,29 @@ function syncMarkers() {
     if (visible && !map.hasLayer(marker)) marker.addTo(map)
     if (!visible && map.hasLayer(marker)) marker.remove()
     if (visible && selected) marker.bringToFront()
+    syncPulse(state, visible)
   }
 }
 
 function syncGeoLayers() {
   if (!map) return
+  const states = props.showMarkers ? props.states : []
+  const flow = `${states.length}:${flowSignature(states)}`
+  if (riversLayer && riversFlow !== flow) {
+    riversLayer.remove()
+    riversLayer = undefined
+  }
   if (!riversLayer && rivers.data.value) {
+    riversFlow = flow
     riversLayer = createRiversLayer(
       rivers.data.value,
+      states,
       new FixedSizeSvg({ pane: RIVERS_PANE }),
       isDark.value,
     )
-    restyleRivers(riversLayer, map.getZoom())
     riversLayer.addTo(map)
   }
+  if (riversLayer) styleRivers(riversLayer, states, map.getZoom(), isDark.value)
   if (!borderLayer && border.data.value) {
     borderLayer = createBorderLayer(
       border.data.value,
@@ -189,7 +228,9 @@ onMounted(() => {
   createGeoPanes(map)
   resetView()
   map.on('zoomend', () => {
-    if (map && riversLayer) restyleRivers(riversLayer, map.getZoom())
+    if (map && riversLayer) {
+      styleRivers(riversLayer, props.showMarkers ? props.states : [], map.getZoom(), isDark.value)
+    }
   })
   legend = createMapLegend(t.value)
   legend.control.addTo(map)
@@ -214,6 +255,7 @@ onBeforeUnmount(() => {
   map?.remove()
   map = undefined
   markers.clear()
+  pulses.clear()
   riversLayer = undefined
   borderLayer = undefined
   setBasemapTheme = undefined
@@ -222,7 +264,7 @@ onBeforeUnmount(() => {
 
 watch(() => [props.states, props.showMarkers, ui.basin, ui.selectedId, locale.value], syncMarkers)
 watch(() => ui.selectedId, focusSelection)
-watch(() => [rivers.data.value, border.data.value], syncGeoLayers)
+watch(() => [rivers.data.value, border.data.value, props.states, props.showMarkers], syncGeoLayers)
 watch(isDark, applyTheme)
 watch(t, (messages) => legend?.setMessages(messages))
 </script>
