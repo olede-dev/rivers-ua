@@ -5,7 +5,14 @@ import { writeFile } from 'node:fs/promises'
 
 import type { Feature, FeatureCollection, Geometry, LineString, MultiLineString } from 'geojson'
 
-import { BORDER_PATH, RIVERS_PATH, type BorderFile, type RiversFile } from '../src/config/geo'
+import {
+  BORDER_PATH,
+  HIDDEN_LABELS_PATH,
+  RIVERS_PATH,
+  type BorderFile,
+  type HiddenLabelsFile,
+  type RiversFile,
+} from '../src/config/geo'
 import {
   clipLineToBox,
   clipLineToRings,
@@ -26,6 +33,12 @@ const BORDER_RIVER_TOLERANCE = 0.015
 const RIVER_TOLERANCE = 0.004
 const BORDER_TOLERANCE = 0.002
 const DIGITS = 3
+/** Countries whose basemap labels are hidden, by Natural Earth ADM0_A3. */
+const HIDDEN_LABEL_COUNTRIES = ['RUS', 'BLR', 'PRK', 'CHN']
+/** ≈5 km: the label mask only decides which side of a border a label point falls on. */
+const HIDDEN_LABELS_TOLERANCE = 0.05
+/** Islands with fewer points than this after simplification are dropped from the mask. */
+const HIDDEN_LABELS_MIN_RING = 4
 const MAX_RIVERS_BYTES = 300 * 1024
 const ELEVATION_URL = 'https://api.open-meteo.com/v1/elevation'
 /** The elevation API takes at most 100 coordinates per request. */
@@ -139,6 +152,26 @@ const border: BorderFile = {
 }
 const borderBytes = await writeJson(BORDER_PATH, border)
 
+// The Ukrainian point-of-view layer leaves Crimea out of Russia, so its labels stay.
+const hiddenLabels: HiddenLabelsFile = {
+  type: 'Feature',
+  properties: {},
+  geometry: {
+    type: 'MultiPolygon',
+    coordinates: countries.features
+      .filter((f) => HIDDEN_LABEL_COUNTRIES.includes(f.properties?.ADM0_A3 as string))
+      .flatMap((f) => {
+        const g = f.geometry
+        if (g?.type === 'Polygon') return [g.coordinates]
+        if (g?.type === 'MultiPolygon') return g.coordinates
+        return []
+      })
+      .map((rings) => [prepareLine(rings[0], HIDDEN_LABELS_TOLERANCE)])
+      .filter(([outer]) => outer.length >= HIDDEN_LABELS_MIN_RING),
+  },
+}
+const hiddenLabelsBytes = await writeJson(HIDDEN_LABELS_PATH, hiddenLabels)
+
 // Cut along the simplified border that the map draws, so river ends meet the drawn line.
 const borderRings = border.geometry.coordinates.flat()
 // Tributaries first: the main lines are drawn over them where the two sources overlap.
@@ -156,4 +189,5 @@ if (riversBytes > MAX_RIVERS_BYTES) {
 }
 
 console.log(`Wrote ${rivers.features.length} river features (${riversBytes} B) to ${RIVERS_PATH}`)
+console.log(`Wrote label mask (${hiddenLabelsBytes} B) to ${HIDDEN_LABELS_PATH}`)
 console.log(`Wrote Ukraine border (${borderBytes} B) to ${BORDER_PATH}`)

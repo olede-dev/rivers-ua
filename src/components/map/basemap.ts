@@ -1,8 +1,14 @@
-import { setWorkerUrl, type LayerSpecification, type StyleSpecification } from 'maplibre-gl'
+import {
+  setWorkerUrl,
+  type FilterSpecification,
+  type LayerSpecification,
+  type StyleSpecification,
+} from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 // `?worker&url` bundles the worker with its shared chunk; a plain `?url` copy fails to start.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 
+import { HIDDEN_LABELS_PATH, type HiddenLabelsFile } from '../../config/geo'
 import type { Locale } from '../../i18n'
 
 setWorkerUrl(workerUrl)
@@ -70,9 +76,15 @@ function esriStyle(dark: boolean): StyleSpecification {
 
 /**
  * Recolours the water, switches labels to the interface language (Latin names as fallback)
- * and slides the relief in under the first label layer.
+ * hides every label inside the `hiddenLabels` countries and slides the relief in under the
+ * first label layer.
  */
-function adaptStyle(style: StyleSpecification, dark: boolean, locale: Locale): StyleSpecification {
+function adaptStyle(
+  style: StyleSpecification,
+  dark: boolean,
+  locale: Locale,
+  hiddenLabels: HiddenLabelsFile | null,
+): StyleSpecification {
   const water = dark ? WATER.dark : WATER.light
   const label = ['coalesce', ['get', `name:${locale}`], ['get', 'name:latin'], ['get', 'name']]
   const layers = style.layers.map((layer): LayerSpecification => {
@@ -83,7 +95,11 @@ function adaptStyle(style: StyleSpecification, dark: boolean, locale: Locale): S
       return { ...layer, paint: { ...layer.paint, 'line-color': water.line } }
     }
     if (layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined) {
-      return { ...layer, layout: { ...layer.layout, 'text-field': label } } as typeof layer
+      const outside = hiddenLabels && (['!', ['within', hiddenLabels]] as FilterSpecification)
+      const filter = outside
+        ? ((layer.filter ? ['all', layer.filter, outside] : outside) as FilterSpecification)
+        : layer.filter
+      return { ...layer, filter, layout: { ...layer.layout, 'text-field': label } } as typeof layer
     }
     return layer
   })
@@ -94,15 +110,27 @@ function adaptStyle(style: StyleSpecification, dark: boolean, locale: Locale): S
   return { ...style, sources: { ...style.sources, ...relief.sources }, layers }
 }
 
+/** Label mask, or null (all labels shown) when it cannot be loaded. */
+async function loadHiddenLabels(): Promise<HiddenLabelsFile | null> {
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}${HIDDEN_LABELS_PATH}`)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    return (await response.json()) as HiddenLabelsFile
+  } catch (error) {
+    console.warn('Label mask failed to load; showing all basemap labels', error)
+    return null
+  }
+}
+
 /**
  * OpenFreeMap vector style for a theme and label language, or the Esri raster style when the
  * vector style fails to load.
  */
 export async function basemapStyle(dark: boolean, locale: Locale): Promise<StyleSpecification> {
   try {
-    const response = await fetch(STYLE_URL(dark))
+    const [response, hiddenLabels] = await Promise.all([fetch(STYLE_URL(dark)), loadHiddenLabels()])
     if (!response.ok) throw new Error(`OpenFreeMap style: HTTP ${response.status}`)
-    return adaptStyle((await response.json()) as StyleSpecification, dark, locale)
+    return adaptStyle((await response.json()) as StyleSpecification, dark, locale, hiddenLabels)
   } catch (error) {
     console.warn('Vector basemap failed to load; switching to Esri Gray Canvas', error)
     return esriStyle(dark)
