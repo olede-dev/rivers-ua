@@ -36,6 +36,23 @@ let resizeObserver: ResizeObserver | undefined
 let viewTouched = false
 const markers = new Map<string, L.CircleMarker>()
 
+/**
+ * Leaflet's SVG renderer only CSS-scales its layer on each `zoom` event and redraws on
+ * `moveend`, so during `flyTo` circle markers balloon by 2^Δzoom. Redraw every frame instead;
+ * the CSS zoom animation (`_animatingZoom`) keeps the stock behaviour.
+ */
+type SvgInternals = L.SVG & {
+  _map: L.Map & { _animatingZoom?: boolean }
+  _onZoom(): void
+  _reset(): void
+}
+const FixedSizeSvg = L.SVG.extend({
+  _onZoom(this: SvgInternals) {
+    if (this._map._animatingZoom) (L.SVG.prototype as SvgInternals)._onZoom.call(this)
+    else this._reset()
+  },
+}) as unknown as new () => L.SVG
+
 function markerRadius(meanAnnual: number | null): number {
   if (meanAnnual === null || meanAnnual <= 0) return 8
   return Math.min(16, Math.max(6, 5 + 2.5 * Math.log10(meanAnnual)))
@@ -106,7 +123,7 @@ function resetView() {
 
 onMounted(() => {
   if (!container.value) return
-  map = L.map(container.value, { minZoom: 4, zoomSnap: 0.25 })
+  map = L.map(container.value, { minZoom: 4, zoomSnap: 0.25, renderer: new FixedSizeSvg() })
   addBasemap(map)
   resetView()
   createMapLegend().addTo(map)
