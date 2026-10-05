@@ -1,10 +1,26 @@
 import L from 'leaflet'
+import '@maplibre/maplibre-gl-leaflet'
+import { setWorkerUrl, type StyleSpecification } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+// `?worker&url` bundles the worker with its shared chunk; a plain `?url` copy fails to start.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+
+import type { Locale } from '../../i18n'
+
+setWorkerUrl(workerUrl)
+
+/** OpenFreeMap vector styles (OpenMapTiles schema): free, no key, any origin. */
+const STYLE_URL = (dark: boolean) =>
+  `https://tiles.openfreemap.org/styles/${dark ? 'dark' : 'positron'}`
 
 /**
- * Public CARTO Basemaps key (non-commercial tier). It ships in the bundle by design;
- * CARTO accepts it only from the allowed Origin, https://olede-dev.github.io.
+ * Water drawn by the basemap itself, so rivers and reservoirs fill their real banks.
+ * The river lines from `rivers.geojson` stay on top for the station tint and the flow.
  */
-const CARTO_KEY = 'cb1_4a4l_1_48d5c1569ad39b00ae334548'
+const WATER = {
+  light: { fill: '#a9c8f5', line: '#7aa7ea' },
+  dark: { fill: '#1e3a6e', line: '#2f5597' },
+}
 
 // Esri's label layers are left out of the fallback: they use Russian-derived names such as "Kiev".
 const ESRI_CANVAS_URL = (style: string) =>
@@ -21,17 +37,6 @@ function relief(dark: boolean): L.TileLayer {
   )
 }
 
-/** CARTO Positron for the light theme, Dark Matter for the dark one. */
-function carto(dark: boolean): L.TileLayer {
-  const style = dark ? 'dark_all' : 'light_all'
-  return L.tileLayer(`https://basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, {
-    attribution: '© OpenStreetMap contributors © CARTO',
-    maxZoom: 19,
-    // Makes the browser send Origin, which CARTO checks against the key's allowed sites.
-    crossOrigin: 'anonymous',
-  })
-}
-
 function esriCanvas(dark: boolean): L.TileLayer {
   return L.tileLayer(ESRI_CANVAS_URL(dark ? 'World_Dark_Gray_Base' : 'World_Light_Gray_Base'), {
     attribution: 'Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors',
@@ -39,35 +44,78 @@ function esriCanvas(dark: boolean): L.TileLayer {
   })
 }
 
-/**
- * CARTO, falling back to Esri Gray Canvas once a CARTO tile fails: CARTO rejects origins
- * outside the key's list (localhost) and may be unavailable. Returns a function that swaps
- * the basemap to the given theme; after a fallback it stays on Esri.
- */
-export function addBasemap(map: L.Map, dark: boolean): (dark: boolean) => void {
-  let cartoFailed = false
-  let current: L.TileLayer | undefined
-  let shade: L.TileLayer | undefined
-  map.createPane(RELIEF_PANE).style.zIndex = '250'
+/** Recolours the water and switches labels to the interface language, Latin names as fallback. */
+function adaptStyle(style: StyleSpecification, dark: boolean, locale: Locale): StyleSpecification {
+  const water = dark ? WATER.dark : WATER.light
+  const label = ['coalesce', ['get', `name:${locale}`], ['get', 'name:latin'], ['get', 'name']]
+  return {
+    ...style,
+    layers: style.layers.map((layer) => {
+      if (layer.type === 'fill' && layer['source-layer'] === 'water') {
+        return { ...layer, paint: { ...layer.paint, 'fill-color': water.fill } }
+      }
+      if (layer.type === 'line' && layer['source-layer'] === 'waterway') {
+        return { ...layer, paint: { ...layer.paint, 'line-color': water.line } }
+      }
+      if (layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined) {
+        return { ...layer, layout: { ...layer.layout, 'text-field': label } } as typeof layer
+      }
+      return layer
+    }),
+  }
+}
 
-  function show(dark: boolean) {
-    current?.remove()
+async function loadStyle(dark: boolean, locale: Locale): Promise<StyleSpecification> {
+  const response = await fetch(STYLE_URL(dark))
+  if (!response.ok) throw new Error(`OpenFreeMap style: HTTP ${response.status}`)
+  return adaptStyle((await response.json()) as StyleSpecification, dark, locale)
+}
+
+/**
+ * OpenFreeMap vector basemap, falling back to Esri Gray Canvas when its style fails to load.
+ * Returns a function that restyles the basemap for a theme and label language.
+ */
+export function addBasemap(
+  map: L.Map,
+  dark: boolean,
+  locale: Locale,
+): (dark: boolean, locale: Locale) => void {
+  map.createPane(RELIEF_PANE).style.zIndex = '250'
+  let shade: L.TileLayer | undefined
+  let vector: L.MaplibreGL | undefined
+  let fallback: L.TileLayer | undefined
+  let request = 0
+
+  function show(dark: boolean, locale: Locale) {
     shade?.remove()
     shade = relief(dark).addTo(map)
-    if (cartoFailed) {
-      current = esriCanvas(dark).addTo(map)
-      return
-    }
-    const layer = carto(dark)
-    layer.once('tileerror', () => {
-      if (current !== layer) return
-      console.warn('CARTO basemap tile failed to load; switching to Esri Gray Canvas')
-      cartoFailed = true
-      show(dark)
-    })
-    current = layer.addTo(map)
+    const own = ++request
+    loadStyle(dark, locale)
+      .then((style) => {
+        if (own !== request) return
+        fallback?.remove()
+        fallback = undefined
+        if (vector) vector.getMaplibreMap().setStyle(style)
+        else {
+          vector = L.maplibreGL({
+            style,
+            attributionControl: false,
+          }).addTo(map)
+          map.attributionControl?.addAttribution(
+            '<a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> © OpenStreetMap contributors',
+          )
+        }
+      })
+      .catch((error: unknown) => {
+        if (own !== request) return
+        console.warn('Vector basemap failed to load; switching to Esri Gray Canvas', error)
+        vector?.remove()
+        vector = undefined
+        fallback?.remove()
+        fallback = esriCanvas(dark).addTo(map)
+      })
   }
 
-  show(dark)
+  show(dark, locale)
   return show
 }

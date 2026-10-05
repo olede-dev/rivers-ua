@@ -8,7 +8,7 @@ import { useLocale } from '../../composables/useLocale'
 import { useRivers, useUkraineBorder } from '../../composables/useMapGeo'
 import { useTheme } from '../../composables/useTheme'
 import { NO_DATA_STROKE } from '../../config/anomalyClasses'
-import { stationName } from '../../i18n'
+import { stationName, type Locale } from '../../i18n'
 import { formatDischarge } from '../../lib/format'
 import { useUiStore } from '../../stores/ui'
 import type { StationState } from '../../types'
@@ -64,7 +64,7 @@ let riversLayer: L.FeatureGroup | undefined
 /** Flow speeds the river paths were built with; other state changes only restyle them. */
 let riversFlow: string | undefined
 let borderLayer: L.LayerGroup | undefined
-let setBasemapTheme: ((dark: boolean) => void) | undefined
+let setBasemapStyle: ((dark: boolean, locale: Locale) => void) | undefined
 let legendControl: MapLegend | undefined
 
 /**
@@ -192,9 +192,9 @@ function syncGeoLayers() {
   }
 }
 
-/** Basemap tiles and geo layer colours follow the theme; markers restyle in `syncMarkers`. */
+/** Basemap style and geo layer colours follow the theme; markers restyle in `syncMarkers`. */
 function applyTheme(dark: boolean) {
-  setBasemapTheme?.(dark)
+  setBasemapStyle?.(dark, locale.value)
   riversLayer?.remove()
   borderLayer?.remove()
   riversLayer = undefined
@@ -231,7 +231,7 @@ function resetView() {
 onMounted(() => {
   if (!container.value) return
   map = L.map(container.value, { minZoom: 4, zoomSnap: 0.25, renderer: new FixedSizeSvg() })
-  setBasemapTheme = addBasemap(map, isDark.value)
+  setBasemapStyle = addBasemap(map, isDark.value, locale.value)
   createGeoPanes(map)
   resetView()
   map.on('zoomend', () => {
@@ -265,7 +265,7 @@ onBeforeUnmount(() => {
   pulses.clear()
   riversLayer = undefined
   borderLayer = undefined
-  setBasemapTheme = undefined
+  setBasemapStyle = undefined
   legendControl = undefined
 })
 
@@ -279,6 +279,7 @@ watch(
   syncGeoLayers,
 )
 watch(isDark, applyTheme)
+watch(locale, (value) => setBasemapStyle?.(isDark.value, value))
 watch(
   () => props.legend,
   (content) => legendControl?.setContent(content),
