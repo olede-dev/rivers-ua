@@ -49,6 +49,11 @@ export function addDays(date: string, days: number): string {
   return fromUtcMs(toUtcMs(date) + days * MS_PER_DAY)
 }
 
+/** Current instant as epoch milliseconds; the one place app code reads the wall clock. */
+export function nowMs(): number {
+  return Date.now()
+}
+
 /** Today's calendar date in Kyiv. */
 export function todayKyiv(now: Date = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-CA', {

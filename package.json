@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "test": "vitest",
     "validate:stations": "tsx scripts/validate-stations.ts",
-    "build:norms": "tsx scripts/build-norms.ts"
+    "build:norms": "tsx scripts/build-norms.ts",
+    "build:snapshot": "tsx scripts/build-snapshot.ts"
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.104.1",

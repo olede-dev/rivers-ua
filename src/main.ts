@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import App from './App.vue'
+import { shouldRetryQuery } from './api/http'
 import router from './router'
 import './styles/main.css'
 
@@ -15,7 +16,7 @@ const queryClient = new QueryClient({
       console.error(`Query ${JSON.stringify(query.queryKey)} failed`, error),
   }),
   defaultOptions: {
-    queries: { staleTime: HOUR_MS, refetchOnWindowFocus: false },
+    queries: { staleTime: HOUR_MS, refetchOnWindowFocus: false, retry: shouldRetryQuery },
   },
 })
 

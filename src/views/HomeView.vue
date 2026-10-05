@@ -9,6 +9,7 @@ import LoadingSkeleton from '../components/ui/LoadingSkeleton.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
 import { useStationsState } from '../composables/useStationsState'
 import { useUrlSync } from '../composables/useUrlSync'
+import { dischargeErrorMessage, snapshotNotice } from '../lib/dischargeMessages'
 import { useUiStore } from '../stores/ui'
 
 // Chart.js loads only when a station is opened, keeping it out of the initial bundle.
@@ -22,6 +23,10 @@ const ui = useUiStore()
 useUrlSync()
 const { states, today, discharge, norms } = useStationsState()
 const dischargeSettled = computed(() => !discharge.isPending.value)
+const errorMessage = computed(() =>
+  discharge.isError.value ? dischargeErrorMessage(discharge.error.value) : null,
+)
+const notice = computed(() => snapshotNotice(discharge.data.value?.source))
 const selected = computed(() => states.value.find((s) => s.station.id === ui.selectedId) ?? null)
 
 // Tailwind's `lg`: the sidebar docks beside the map and starts open; below it, a closed drawer.
@@ -32,12 +37,19 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
 <template>
   <div class="flex min-h-dvh flex-col bg-slate-50 lg:h-dvh">
     <AppHeader />
+    <p
+      v-if="notice"
+      role="status"
+      class="shrink-0 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-950"
+    >
+      {{ notice }}
+    </p>
     <div class="flex flex-1 lg:min-h-0">
       <StationsSidebar
         :states="states"
         :modal="!isDesktop"
         :pending="discharge.isPending.value"
-        :discharge-error="discharge.isError.value"
+        :discharge-error-message="errorMessage"
         :norms-error="norms.isError.value"
         @retry="discharge.refetch()"
       />
@@ -57,10 +69,11 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
           <StationDetails
             :key="selected.station.id"
             :state="selected"
-            :series="discharge.data.value?.get(selected.station.id)"
+            :series="discharge.data.value?.series.get(selected.station.id)"
             :norms="norms.data.value?.stations[selected.station.id] ?? null"
             :today="today"
             :status="discharge.status.value"
+            :error-message="errorMessage ?? ''"
             @retry="discharge.refetch()"
           />
         </aside>

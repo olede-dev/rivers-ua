@@ -21,6 +21,8 @@ const props = defineProps<{
   today: string
   /** Status of the discharge query `series` comes from. */
   status: 'pending' | 'error' | 'success'
+  /** Shown when `status` is `error`. */
+  errorMessage: string
 }>()
 defineEmits<{ retry: [] }>()
 
@@ -113,11 +115,7 @@ onMounted(() => heading.value?.focus())
         label="Завантаження графіка…"
         class="h-[260px] lg:h-80"
       />
-      <ErrorState
-        v-else-if="status === 'error'"
-        message="Не вдалося завантажити дані Open-Meteo."
-        @retry="$emit('retry')"
-      />
+      <ErrorState v-else-if="status === 'error'" :message="errorMessage" @retry="$emit('retry')" />
       <DischargeChart
         v-else-if="chartSeries"
         :series="chartSeries"

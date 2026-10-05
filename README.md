@@ -60,6 +60,7 @@ npm run dev
 | `npm test`                  | тести Vitest                                          |
 | `npm run validate:stations` | перевірка координат станцій через Open-Meteo          |
 | `npm run build:norms`       | перерахунок норм 1991–2020 у `public/data/norms.json` |
+| `npm run build:snapshot`    | запасний знімок витрат у `public/data/discharge-snapshot.json` (не комітиться; CI робить його перед кожним деплоєм і щодня) |
 
 Останні дві команди звертаються до Open-Meteo і перезаписують закомічені дані; для звичайної
 розробки вони не потрібні. Кожен push у `main` збирається і публікується на GitHub Pages.

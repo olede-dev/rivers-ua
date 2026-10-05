@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Built by `npm run build:snapshot` (CI runs it before each deploy)
+/public/data/discharge-snapshot.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -10,7 +10,7 @@ const props = defineProps<{
   /** A drawer over the page on narrow screens; a docked column on wide ones. */
   modal: boolean
   pending: boolean
-  dischargeError: boolean
+  dischargeErrorMessage: string | null
   normsError: boolean
 }>()
 defineEmits<{ retry: [] }>()
@@ -56,7 +56,7 @@ function onDialogClick(event: MouseEvent) {
     <StationsPanel
       :states="states"
       :pending="pending"
-      :discharge-error="dischargeError"
+      :discharge-error-message="dischargeErrorMessage"
       :norms-error="normsError"
       close-label="Закрити список станцій"
       @retry="$emit('retry')"
@@ -73,7 +73,7 @@ function onDialogClick(event: MouseEvent) {
     <StationsPanel
       :states="states"
       :pending="pending"
-      :discharge-error="dischargeError"
+      :discharge-error-message="dischargeErrorMessage"
       :norms-error="normsError"
       close-label="Сховати список станцій"
       @retry="$emit('retry')"

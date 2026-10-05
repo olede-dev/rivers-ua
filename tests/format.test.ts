@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatCoordinates, formatDischarge, formatPct } from '../src/lib/format'
+import { formatCoordinates, formatDischarge, formatPct, formatPlainDate } from '../src/lib/format'
 
 // uk-UA groups thousands with a no-break space and uses a decimal comma.
 const NBSP = ' '
@@ -26,5 +26,11 @@ describe('formatPct', () => {
 describe('formatCoordinates', () => {
   it('writes three decimals with a comma and the hemisphere in Ukrainian', () => {
     expect(formatCoordinates({ lat: 50.475, lon: 30.5 })).toBe('50,475° пн. ш., 30,500° сх. д.')
+  })
+})
+
+describe('formatPlainDate', () => {
+  it('shows the calendar date itself, not the day before in zones west of UTC', () => {
+    expect(formatPlainDate('2026-10-05')).toMatch(/^5 жовтня 2026/)
   })
 })

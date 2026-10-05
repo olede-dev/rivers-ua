@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { fetchDischargeHistory } from '../src/api/flood'
-import { AppError, getJson } from '../src/api/http'
+import { AppError, getJson, shouldRetryQuery } from '../src/api/http'
 
 const URL_UNDER_TEST = new URL('https://flood-api.open-meteo.com/v1/flood')
 
@@ -22,6 +22,15 @@ describe('getJson', () => {
       category: 'Upstream',
       code: 'upstream_rejected',
       details: { status: 400, reason: 'Parameter forecast_days must be between 0 and 210' },
+    })
+  })
+
+  it('marks HTTP 429 as rate limited so the page can say so', async () => {
+    stubFetch({ error: true, reason: 'Daily API request limit exceeded.' }, 429)
+    await expect(getJson(URL_UNDER_TEST)).rejects.toMatchObject({
+      category: 'Upstream',
+      code: 'upstream_rate_limited',
+      details: { status: 429 },
     })
   })
 
@@ -82,5 +91,24 @@ describe('fetchDischargeHistory', () => {
         { startDate: '2020-01-01', endDate: '2020-01-02' },
       ),
     ).rejects.toMatchObject({ code: 'upstream_invalid_response' })
+  })
+})
+
+describe('shouldRetryQuery', () => {
+  const upstream = (code: string, status?: number) =>
+    new AppError({ category: 'Upstream', code, message: 'x', details: { status } })
+
+  it.each([
+    ['a timeout', upstream('upstream_timeout'), true],
+    ['an unreachable host', upstream('upstream_unreachable'), true],
+    ['HTTP 503', upstream('upstream_rejected', 503), true],
+    ['a rate limit, which only spends more quota', upstream('upstream_rate_limited', 429), false],
+    ['a rejected request', upstream('upstream_rejected', 400), false],
+  ])('first failure from %s → retry %s', (_name, error, expected) => {
+    expect(shouldRetryQuery(0, error)).toBe(expected)
+  })
+
+  it('stops after two retries', () => {
+    expect(shouldRetryQuery(2, upstream('upstream_timeout'))).toBe(false)
   })
 })

@@ -1,4 +1,5 @@
 import type { Coordinates } from '../types'
+import { assertDate } from './dates'
 
 const LOCALE = 'uk-UA'
 const MINUS = '−'
@@ -35,4 +36,16 @@ export function formatCoordinates({ lat, lon }: Coordinates): string {
   const latitude = `${coordinate.format(Math.abs(lat))}° ${lat < 0 ? 'пд.' : 'пн.'} ш.`
   const longitude = `${coordinate.format(Math.abs(lon))}° ${lon < 0 ? 'зх.' : 'сх.'} д.`
   return `${latitude}, ${longitude}`
+}
+
+const plainDate = new Intl.DateTimeFormat(LOCALE, {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
+/** Calendar date for reading: `2026-10-05` → `5 жовтня 2026 р.`. */
+export function formatPlainDate(date: string): string {
+  return plainDate.format(new Date(`${assertDate(date)}T00:00:00Z`))
 }

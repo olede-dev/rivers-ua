@@ -41,7 +41,7 @@ export function useStationsState() {
 
   const states = computed(() =>
     STATIONS.map((station) =>
-      toState(station, discharge.data.value?.get(station.id), norms.data.value, today),
+      toState(station, discharge.data.value?.series.get(station.id), norms.data.value, today),
     ),
   )
 

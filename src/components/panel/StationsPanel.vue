@@ -8,7 +8,8 @@ import StationList from './StationList.vue'
 defineProps<{
   states: readonly StationState[]
   pending: boolean
-  dischargeError: boolean
+  /** Set when discharge failed to load. */
+  dischargeErrorMessage: string | null
   normsError: boolean
   closeLabel: string
 }>()
@@ -41,8 +42,8 @@ defineEmits<{ retry: []; close: [] }>()
     </div>
     <BasinFilter />
     <ErrorState
-      v-if="dischargeError"
-      message="Не вдалося завантажити дані Open-Meteo."
+      v-if="dischargeErrorMessage"
+      :message="dischargeErrorMessage"
       @retry="$emit('retry')"
     />
     <p v-if="normsError" class="text-sm text-slate-600">
