@@ -3,14 +3,14 @@ defineProps<{ label: string; value: string; unit?: string }>()
 </script>
 
 <template>
-  <div class="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2 sm:p-3">
-    <dt class="text-xs leading-tight text-slate-600">{{ label }}</dt>
-    <dd class="mt-1">
-      <span class="text-lg font-semibold text-slate-900 tabular-nums sm:text-xl">{{ value }}</span>
-      <span v-if="unit && value !== '—'" class="ml-1 text-xs text-slate-600 sm:text-sm">{{
-        unit
-      }}</span>
-      <span v-if="$slots.default" class="mt-1.5 block"><slot /></span>
+  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2">
+    <dt class="text-sm text-slate-600">{{ label }}</dt>
+    <dd class="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+      <slot />
+      <span>
+        <span class="text-base font-semibold text-slate-900 tabular-nums">{{ value }}</span>
+        <span v-if="unit && value !== '—'" class="ml-1 text-sm text-slate-600">{{ unit }}</span>
+      </span>
     </dd>
   </div>
 </template>

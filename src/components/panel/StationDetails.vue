@@ -11,7 +11,7 @@ import ErrorState from '../ui/ErrorState.vue'
 import LoadingSkeleton from '../ui/LoadingSkeleton.vue'
 import ChartControls from './ChartControls.vue'
 import DischargeChart from './DischargeChart.vue'
-import StatCard from './StatCard.vue'
+import StatRow from './StatRow.vue'
 
 const props = defineProps<{
   state: StationState
@@ -90,16 +90,18 @@ onMounted(() => heading.value?.focus())
       </p>
     </header>
 
-    <dl class="grid grid-cols-3 gap-2">
-      <StatCard label="Зараз" :value="formatDischarge(state.current)" unit="м³/с" />
-      <StatCard
+    <dl
+      class="divide-y divide-slate-200 rounded-md border border-slate-200 bg-slate-50 text-slate-900"
+    >
+      <StatRow label="Зараз" :value="formatDischarge(state.current)" unit="м³/с" />
+      <StatRow
         label="Норма на сьогодні"
         :value="formatDischarge(state.norm?.median ?? null)"
         unit="м³/с"
       />
-      <StatCard label="Відхилення" :value="formatPct(state.anomalyPct)">
+      <StatRow label="Відхилення" :value="formatPct(state.anomalyPct)">
         <AnomalyBadge v-if="state.anomalyClass" :anomaly-class="state.anomalyClass" />
-      </StatCard>
+      </StatRow>
     </dl>
 
     <section class="space-y-3" aria-labelledby="chart-heading">
