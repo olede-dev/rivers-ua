@@ -25,6 +25,8 @@
   --ui-accent-ink: #0066cc;
   --ui-shadow-color: rgb(0 0 0 / 0.08);
   --ui-ring: rgb(0 0 0 / 0.06);
+  --ui-scrollbar: rgb(0 0 0 / 0.32);
+  --ui-scrollbar-active: rgb(0 0 0 / 0.5);
 }
 
 .dark {
@@ -43,6 +45,8 @@
   --ui-accent-ink: #4da3ff;
   --ui-shadow-color: rgb(0 0 0 / 0.4);
   --ui-ring: rgb(255 255 255 / 0.08);
+  --ui-scrollbar: rgb(255 255 255 / 0.32);
+  --ui-scrollbar-active: rgb(255 255 255 / 0.5);
 }
 
 @theme inline {
@@ -100,6 +104,59 @@
   [role='button']:not([aria-disabled='true']),
   summary {
     cursor: pointer;
+  }
+}
+
+/*
+ * iOS-style scrollbars in every scrolling block: a thin rounded thumb with no track, inset from
+ * the edge and clear of rounded corners, shown while the pointer is over the block. Chromium
+ * ignores ::-webkit-scrollbar once scrollbar-width/-color is set, so the standard properties
+ * only go to engines without the pseudo-elements (Firefox).
+ */
+*::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+  background: transparent;
+}
+
+*::-webkit-scrollbar-track {
+  margin: 10px;
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  border: 3.5px solid transparent;
+  border-radius: 999px;
+  background-color: transparent;
+  background-clip: padding-box;
+}
+
+*:hover::-webkit-scrollbar-thumb,
+*:focus-within::-webkit-scrollbar-thumb {
+  background-color: var(--ui-scrollbar);
+}
+
+*::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--ui-scrollbar-active);
+}
+
+*::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-button {
+  display: none;
+  background: transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  *:hover,
+  *:focus-within {
+    scrollbar-color: var(--ui-scrollbar) transparent;
   }
 }
 
