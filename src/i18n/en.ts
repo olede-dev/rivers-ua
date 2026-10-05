@@ -104,7 +104,7 @@ export const en: Messages = {
     precipitationRateLimited:
       'Precipitation unavailable: the Open-Meteo request limit is exhausted.',
     chartNote:
-      'Forecast — GloFAS ensemble: median, interquartile range (p25–p75) and full spread (min–max). Norm — 1997–2020 for the same day of the year.',
+      'Forecast — GloFAS ensemble median, band — interquartile range (p25–p75). Norm — 1997–2020 median for the same day of the year, band — p25–p75. The full ensemble spread (min–max) is in the CSV.',
   },
   chart: {
     rangeLabel: 'Forecast horizon',
@@ -113,11 +113,10 @@ export const en: Messages = {
     precipitationToggle: 'Precipitation',
     pctOfNorm: '% of norm',
     normBand: 'Norm p25–p75',
-    forecastSpread: 'Forecast min–max',
     forecastIqr: 'Forecast p25–p75',
     normRelative: 'Norm (100%)',
-    normMedian: 'Norm (median)',
-    forecastMedian: 'Forecast (ensemble median)',
+    norm: 'Norm',
+    forecast: 'Forecast',
     past: 'Past values (model)',
     dischargeAxis: 'Discharge, m³/s',
     precipitation: 'Precipitation',

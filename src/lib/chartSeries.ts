@@ -1,7 +1,7 @@
 import type { PrecipitationSeries } from '../api/weather'
 import type { DailyValues, DischargeSeries, StationNorms } from '../types'
 import { addDays, dayOfYear } from './dates'
-import { nonNull, roundTo } from './stats'
+import { roundTo } from './stats'
 
 export interface ChartWindow {
   /** Today in Kyiv; the past line ends here and the forecast starts here. */
@@ -18,8 +18,6 @@ export interface ChartSeries {
   past: DailyValues
   forecast: {
     median: DailyValues
-    min: DailyValues
-    max: DailyValues
     p25: DailyValues
     p75: DailyValues
   }
@@ -66,8 +64,6 @@ export function buildChartSeries(
     past: pick(series.discharge, isPast),
     forecast: {
       median: pick(ensemble.median, isForecast),
-      min: pick(ensemble.min, isForecast),
-      max: pick(ensemble.max, isForecast),
       p25: pick(ensemble.p25, isForecast),
       p75: pick(ensemble.p75, isForecast),
     },
@@ -84,31 +80,4 @@ export function buildChartSeries(
 function alignByDate(time: string[], sourceTime: string[], values: DailyValues): DailyValues {
   const byDate = new Map(sourceTime.map((date, i) => [date, values[i]]))
   return time.map((date) => byDate.get(date) ?? null)
-}
-
-/** Headroom above the core series before the min–max band is cut at the top edge. */
-const CORE_HEADROOM = 1.5
-
-function niceCeil(value: number): number {
-  const step = 10 ** Math.floor(Math.log10(value)) / 2
-  return Math.ceil(value / step) * step
-}
-
-/**
- * Upper bound for the value axis, or `null` to let it fit everything. Single ensemble members
- * can run to many times the median; letting them set the scale flattens the past line, the
- * forecast median and the norm, so the axis follows those and the min–max band is clipped.
- */
-export function valueAxisMax(series: ChartSeries): number | null {
-  const maxOf = (columns: DailyValues[]) =>
-    Math.max(0, ...columns.flatMap((values) => nonNull(values)))
-  const core = maxOf([
-    series.past,
-    series.forecast.median,
-    series.forecast.p75,
-    series.norm?.p75 ?? [],
-  ])
-  if (core <= 0) return null
-  const limit = core * CORE_HEADROOM
-  return maxOf([series.forecast.max]) > limit ? niceCeil(limit) : null
 }

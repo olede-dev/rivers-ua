@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildChartSeries, type ChartWindow, valueAxisMax } from '../src/lib/chartSeries'
+import { buildChartSeries, type ChartWindow } from '../src/lib/chartSeries'
 import type { DischargeSeries, NormDay, StationNorms } from '../src/types'
 
 // 1–5 January; today is the 3rd.
@@ -65,22 +65,5 @@ describe('buildChartSeries', () => {
     const result = buildChartSeries(series, null, { ...window, relative: true })
     expect(result.norm).toBeNull()
     expect(result.past).toEqual([null, null, null])
-  })
-})
-
-describe('valueAxisMax', () => {
-  const base = buildChartSeries(series, null, window)
-  const withMax = (max: number) => ({
-    ...base,
-    forecast: { ...base.forecast, max: [null, max, null] },
-  })
-
-  it('fits everything while the ensemble maximum stays within 1.5× the core series', () => {
-    // Core maximum is the past value 300, so the limit is 450.
-    expect(valueAxisMax(withMax(450))).toBeNull()
-  })
-
-  it('caps the axis at 1.5× the core series when the ensemble maximum runs higher', () => {
-    expect(valueAxisMax(withMax(5000))).toBe(450)
   })
 })

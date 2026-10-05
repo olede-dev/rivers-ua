@@ -16,6 +16,7 @@ import {
   type ChartData,
   type ChartDataset,
   type ChartOptions,
+  type LegendItem,
   type TooltipItem,
 } from 'chart.js'
 import annotationPlugin from 'chartjs-plugin-annotation'
@@ -27,7 +28,7 @@ import { Chart } from 'vue-chartjs'
 import { useLocale } from '../../composables/useLocale'
 import { useTheme } from '../../composables/useTheme'
 import type { Locale } from '../../i18n'
-import { type ChartSeries, valueAxisMax } from '../../lib/chartSeries'
+import type { ChartSeries } from '../../lib/chartSeries'
 import { formatDischarge, formatPctOfNorm, formatPrecipitation } from '../../lib/format'
 import type { DailyValues } from '../../types'
 import './chartDefaults'
@@ -59,8 +60,7 @@ const PALETTES = {
     norm: '#8e8e93',
     normBand: 'rgba(142, 142, 147, 0.16)',
     forecast: '#0071e3',
-    forecastOuter: 'rgba(0, 113, 227, 0.1)',
-    forecastInner: 'rgba(0, 113, 227, 0.22)',
+    forecastBand: 'rgba(0, 113, 227, 0.2)',
     past: '#1d1d1f',
     precipitation: 'rgba(48, 176, 199, 0.75)',
     today: '#1d1d1f',
@@ -72,8 +72,7 @@ const PALETTES = {
     norm: '#98989d',
     normBand: 'rgba(152, 152, 157, 0.2)',
     forecast: '#0a84ff',
-    forecastOuter: 'rgba(10, 132, 255, 0.14)',
-    forecastInner: 'rgba(10, 132, 255, 0.3)',
+    forecastBand: 'rgba(10, 132, 255, 0.28)',
     past: '#f5f5f7',
     precipitation: 'rgba(100, 210, 255, 0.7)',
     today: '#f5f5f7',
@@ -92,12 +91,17 @@ const colors = computed(() => (isDark.value ? PALETTES.dark : PALETTES.light))
 /** Typed for the mixed chart: line datasets plus the precipitation bars. */
 type Dataset = ChartDataset<'line' | 'bar', DailyValues>
 
-/** A band is drawn by an invisible lower line and an upper line filled down to it. */
-interface Band {
+/**
+ * A median line with an optional band around it, drawn by an invisible lower line and an
+ * upper line filled down to it. The legend shows one entry per group: the line, filled with
+ * the band colour, and a click hides the line and its band together.
+ */
+interface Group {
   label: string
-  lower: DailyValues
-  upper: DailyValues
-  fill: string
+  data: DailyValues
+  color: string
+  style: Partial<Dataset>
+  band?: { label: string; lower: DailyValues; upper: DailyValues; fill: string }
 }
 
 const formatValue = (value: number | null) =>
@@ -109,57 +113,66 @@ function line(label: string, data: DailyValues, style: Partial<Dataset>): Datase
   return { label, data, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1.5, ...style }
 }
 
+/** The line takes the band fill only as its legend swatch; hover points keep the line colour. */
+function groupLine(group: Group): Dataset {
+  const { color } = group
+  return line(group.label, group.data, {
+    borderColor: color,
+    pointBackgroundColor: color,
+    pointHoverBackgroundColor: color,
+    ...group.style,
+    backgroundColor: group.band?.fill ?? 'transparent',
+  })
+}
+
 const chart = computed(() => {
   const { series, relative } = props
   const COLORS = colors.value
   const labels = t.value.chart
-  const bands: Band[] = []
-  const lines: Dataset[] = []
+  const groups: Group[] = []
 
   // Listed bottom to top; datasets are reversed below because Chart.js draws index 0 last.
   if (series.norm) {
-    bands.push({
-      label: labels.normBand,
-      lower: series.norm.p25,
-      upper: series.norm.p75,
-      fill: COLORS.normBand,
+    groups.push({
+      label: relative ? labels.normRelative : labels.norm,
+      data: series.norm.median,
+      color: COLORS.norm,
+      style: { borderDash: [5, 4] },
+      band: {
+        label: labels.normBand,
+        lower: series.norm.p25,
+        upper: series.norm.p75,
+        fill: COLORS.normBand,
+      },
     })
   }
-  bands.push(
+  groups.push(
     {
-      label: labels.forecastSpread,
-      lower: series.forecast.min,
-      upper: series.forecast.max,
-      fill: COLORS.forecastOuter,
+      label: labels.forecast,
+      data: series.forecast.median,
+      color: COLORS.forecast,
+      style: { borderWidth: 2 },
+      band: {
+        label: labels.forecastIqr,
+        lower: series.forecast.p25,
+        upper: series.forecast.p75,
+        fill: COLORS.forecastBand,
+      },
     },
-    {
-      label: labels.forecastIqr,
-      lower: series.forecast.p25,
-      upper: series.forecast.p75,
-      fill: COLORS.forecastInner,
-    },
-  )
-  if (series.norm) {
-    lines.push(
-      line(relative ? labels.normRelative : labels.normMedian, series.norm.median, {
-        borderColor: COLORS.norm,
-        borderDash: [5, 4],
-      }),
-    )
-  }
-  lines.push(
-    line(labels.forecastMedian, series.forecast.median, {
-      borderColor: COLORS.forecast,
-      borderDash: [6, 3],
-      borderWidth: 2,
-    }),
-    line(labels.past, series.past, { borderColor: COLORS.past, borderWidth: 2 }),
+    { label: labels.past, data: series.past, color: COLORS.past, style: { borderWidth: 2 } },
   )
 
-  // Top-most first. Each band upper line is followed by its lower line and fills to it.
+  // Top-most first: every line, then the bars, then the bands under them all. Each band upper
+  // line is followed by its lower line and fills down to it.
   const datasets: Dataset[] = []
   const lowerIndices = new Set<number>()
-  for (const dataset of [...lines].reverse()) datasets.push(dataset)
+  /** Line dataset index → its band's upper and lower indices, toggled with it from the legend. */
+  const bandIndices = new Map<number, number[]>()
+  const lineIndices = new Map<Group, number>()
+  for (const group of [...groups].reverse()) {
+    lineIndices.set(group, datasets.length)
+    datasets.push(groupLine(group))
+  }
   // Bars go between the lines and the bands: drawn over the translucent bands, under the lines.
   const precipitationIndex = series.precipitation ? datasets.length : null
   if (series.precipitation) {
@@ -173,7 +186,9 @@ const chart = computed(() => {
       categoryPercentage: 1,
     })
   }
-  for (const band of [...bands].reverse()) {
+  for (const group of [...groups].reverse()) {
+    const { band } = group
+    if (!band) continue
     const upperIndex = datasets.length
     datasets.push(
       line(band.label, band.upper, {
@@ -184,10 +199,11 @@ const chart = computed(() => {
       line(band.label, band.lower, { borderWidth: 0, pointHoverRadius: 0 }),
     )
     lowerIndices.add(upperIndex + 1)
+    bandIndices.set(lineIndices.get(group)!, [upperIndex, upperIndex + 1])
   }
 
   const data: ChartData<'line' | 'bar', DailyValues, string> = { labels: series.time, datasets }
-  return { data, lowerIndices, precipitationIndex }
+  return { data, lowerIndices, bandIndices, precipitationIndex }
 })
 
 function tooltipLabel(item: TooltipItem<'line' | 'bar'>): string {
@@ -204,8 +220,20 @@ function tooltipLabel(item: TooltipItem<'line' | 'bar'>): string {
   return `${dataset.label}: ${formatValue(value)}`
 }
 
+/** Hides or shows a legend entry's line together with its band. */
+function toggleGroup(legendChart: ChartJS, item: LegendItem) {
+  const index = item.datasetIndex
+  if (index === undefined) return
+  const visible = !legendChart.isDatasetVisible(index)
+  for (const i of [index, ...(chart.value.bandIndices.get(index) ?? [])]) {
+    legendChart.setDatasetVisibility(i, visible)
+  }
+  legendChart.update()
+}
+
 const options = computed((): ChartOptions<'line' | 'bar'> => {
-  const { lowerIndices, precipitationIndex } = chart.value
+  const { lowerIndices, bandIndices, precipitationIndex } = chart.value
+  const bands = new Set([...bandIndices.values()].flat())
   const COLORS = colors.value
   return {
     color: COLORS.text,
@@ -230,7 +258,6 @@ const options = computed((): ChartOptions<'line' | 'bar'> => {
       },
       y: {
         beginAtZero: true,
-        max: valueAxisMax(props.series) ?? undefined,
         title: {
           display: true,
           text: props.relative ? t.value.chart.pctOfNorm : t.value.chart.dischargeAxis,
@@ -260,13 +287,14 @@ const options = computed((): ChartOptions<'line' | 'bar'> => {
     plugins: {
       legend: {
         position: 'bottom',
+        onClick: (_event, item, legend) => toggleGroup(legend.chart, item),
         labels: {
           color: COLORS.text,
           boxWidth: 12,
           boxHeight: 8,
           useBorderRadius: true,
           borderRadius: 2,
-          filter: (item) => item.datasetIndex === undefined || !lowerIndices.has(item.datasetIndex),
+          filter: (item) => item.datasetIndex === undefined || !bands.has(item.datasetIndex),
         },
       },
       tooltip: {

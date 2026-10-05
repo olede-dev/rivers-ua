@@ -105,7 +105,7 @@ export const uk = {
     precipitationFailed: 'Опади не завантажилися.',
     precipitationRateLimited: 'Опади недоступні: ліміт запитів до Open-Meteo вичерпано.',
     chartNote:
-      'Прогноз — ансамбль GloFAS: медіана, міжквартильний діапазон (p25–p75) і повний розкид (min–max). Норма — 1997–2020 для того самого дня року.',
+      'Прогноз — медіана ансамблю GloFAS, смуга — міжквартильний діапазон (p25–p75). Норма — медіана 1997–2020 для того самого дня року, смуга — p25–p75. Повний розкид ансамблю (min–max) є в CSV.',
   },
   chart: {
     rangeLabel: 'Горизонт прогнозу',
@@ -114,11 +114,10 @@ export const uk = {
     precipitationToggle: 'Опади',
     pctOfNorm: '% від норми',
     normBand: 'Норма p25–p75',
-    forecastSpread: 'Прогноз min–max',
     forecastIqr: 'Прогноз p25–p75',
     normRelative: 'Норма (100%)',
-    normMedian: 'Норма (медіана)',
-    forecastMedian: 'Прогноз (медіана ансамблю)',
+    norm: 'Норма',
+    forecast: 'Прогноз',
     past: 'Минулі значення (модель)',
     dischargeAxis: 'Витрата води, м³/с',
     precipitation: 'Опади',
