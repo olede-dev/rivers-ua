@@ -1,0 +1,76 @@
+{
+  "period": "2010-01-01/2019-12-31",
+  "source": "GloFAS v4 via Open-Meteo Flood API",
+  "stations": {
+    "dnipro-kyiv": {
+      "lat": 50.4,
+      "lon": 30.52,
+      "meanDischarge": 902.2,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "desna-chernihiv": {
+      "lat": 51.47,
+      "lon": 31.26,
+      "meanDischarge": 218.6,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "desna-novhorod-siverskyi": {
+      "lat": 51.95,
+      "lon": 33.27,
+      "meanDischarge": 98.3,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "prypiat-chornobyl": {
+      "lat": 51.23,
+      "lon": 30.28,
+      "meanDischarge": 266.7,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "dnister-zalishchyky": {
+      "lat": 48.64,
+      "lon": 25.78,
+      "meanDischarge": 147,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "prut-chernivtsi": {
+      "lat": 48.26,
+      "lon": 25.98,
+      "meanDischarge": 52.7,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "tysa-vylok": {
+      "lat": 48.1,
+      "lon": 22.78,
+      "meanDischarge": 106.8,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "danube-izmail": {
+      "lat": 45.34,
+      "lon": 28.89,
+      "meanDischarge": 6657.3,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "pivdennyi-buh-pervomaisk": {
+      "lat": 48.04,
+      "lon": 30.85,
+      "meanDischarge": 59.5,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    },
+    "siverskyi-donets-izium": {
+      "lat": 49.16,
+      "lon": 37.26,
+      "meanDischarge": 36.8,
+      "inExpectedRange": true,
+      "searchRadiusDeg": 0.05
+    }
+  }
+}
