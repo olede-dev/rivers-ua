@@ -91,6 +91,7 @@ export const en: Messages = {
       highDetail: (date: string) => `forecast median above the p90 norm from ${date}`,
       lowDetail: (date: string) => `forecast median below the p10 norm from ${date}`,
     },
+    exportCsv: 'Export CSV',
     chartHeading: 'GloFAS discharge and forecast',
     normsMissing: 'Norms failed to load — the chart is shown in m³/s.',
     loadingChart: 'Loading chart…',

@@ -93,6 +93,7 @@ export const uk = {
       highDetail: (date: string) => `медіана прогнозу вище p90 норми з ${date}`,
       lowDetail: (date: string) => `медіана прогнозу нижче p10 норми з ${date}`,
     },
+    exportCsv: 'Експорт у CSV',
     chartHeading: 'Витрати і прогноз GloFAS',
     normsMissing: 'Норми не завантажилися — графік показано в м³/с.',
     loadingChart: 'Завантаження графіка…',

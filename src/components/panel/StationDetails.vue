@@ -7,6 +7,7 @@ import { usePrecipitation } from '../../composables/usePrecipitation'
 import { stationName } from '../../i18n'
 import { forecastOutlook } from '../../lib/anomaly'
 import { buildChartSeries } from '../../lib/chartSeries'
+import { downloadCsv, stationCsv } from '../../lib/csv'
 import { formatCoordinates, formatDischarge, formatPct } from '../../lib/format'
 import { useUiStore, type ChartRange } from '../../stores/ui'
 import type { DischargeSeries, StationNorms, StationState } from '../../types'
@@ -72,6 +73,11 @@ const chartSeries = computed(
       ui.showPrecip ? (precipitation.data.value ?? null) : null,
     ),
 )
+
+function exportCsv() {
+  if (!props.series) return
+  downloadCsv(`${props.state.station.id}-${props.today}.csv`, stationCsv(props.series, props.norms))
+}
 
 // The panel opens beside the map; move focus so keyboard and screen-reader users follow.
 onMounted(() => heading.value?.focus())
@@ -171,6 +177,28 @@ onMounted(() => heading.value?.focus())
       <p v-if="precipitationError" role="status" class="text-xs text-amber-800 dark:text-amber-300">
         {{ precipitationError }}
       </p>
+      <button
+        v-if="series"
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded border border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+        @click="exportCsv"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          class="size-4"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+        >
+          <path
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 4v11m-4-4l4 4 4-4M5 19h14"
+          />
+        </svg>
+        {{ t.details.exportCsv }}
+      </button>
       <p class="text-xs text-slate-500 dark:text-slate-400">
         {{ t.details.chartNote }}
         <template v-if="ui.showPrecip"> {{ t.details.precipitationNote }}</template>
