@@ -7,6 +7,12 @@
   }
 }
 
+/* Clicking a marker draws the browser's focus box around the SVG path; markers are not
+   tab stops (the station list is the keyboard path), so the box only adds noise. */
+.leaflet-container path.leaflet-interactive:focus {
+  outline: none;
+}
+
 /* The stations drawer slides in from the right edge on narrow screens. */
 .drawer[open] {
   animation: drawer-in 200ms ease-out;
