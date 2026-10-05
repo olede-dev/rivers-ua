@@ -50,6 +50,8 @@ const props = defineProps<{
   legend: LegendContent
   /** Markers appear only once discharge has loaded or failed. */
   showMarkers: boolean
+  /** The timeline sits at the bottom right; a map too narrow for both lifts the legend over it. */
+  raiseLegend: boolean
 }>()
 const emit = defineEmits<{ basemap: [kind: BasemapKind] }>()
 
@@ -351,6 +353,10 @@ watch([isDark, locale], applyStyle)
 <template>
   <div class="relative size-full">
     <div ref="container" class="size-full" role="region" :aria-label="t.map.ariaLabel"></div>
-    <MapLegend :content="legend" class="absolute bottom-2.5 left-2.5 z-[1000]" />
+    <MapLegend
+      :content="legend"
+      class="absolute left-2.5 z-[1000]"
+      :class="raiseLegend ? 'bottom-20 @min-[34rem]:bottom-2.5' : 'bottom-2.5'"
+    />
   </div>
 </template>

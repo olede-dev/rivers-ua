@@ -79,8 +79,19 @@ onBeforeUnmount(stop)
     </button>
     <div class="flex min-w-0 flex-1 flex-col gap-1">
       <div class="flex items-baseline justify-between gap-2 text-xs">
-        <span class="font-semibold tabular-nums text-ink">
-          {{ formatDayMonth(date, locale) }}
+        <span class="flex items-baseline gap-1.5">
+          <span class="font-semibold tabular-nums text-ink">
+            {{ formatDayMonth(date, locale) }}
+          </span>
+          <button
+            v-if="date !== today"
+            type="button"
+            class="rounded font-medium text-accent-ink hover:underline focus-ring"
+            :aria-label="t.map.timeline.todayLabel"
+            @click="backToToday"
+          >
+            {{ t.map.timeline.today }}
+          </button>
         </span>
         <span
           class="grid rounded-full px-2 py-0.5 text-center text-[11px] font-medium"
@@ -118,15 +129,5 @@ onBeforeUnmount(stop)
         ></span>
       </div>
     </div>
-    <!-- Hidden rather than removed, so the slider keeps its width while playing. -->
-    <button
-      type="button"
-      :class="{ invisible: date === today }"
-      class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-fill focus-ring"
-      :aria-label="t.map.timeline.todayLabel"
-      @click="backToToday"
-    >
-      {{ t.map.timeline.today }}
-    </button>
   </div>
 </template>

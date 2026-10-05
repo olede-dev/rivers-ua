@@ -125,6 +125,7 @@ const mapHeight = computed(() => {
             :marks="marks"
             :legend="legend"
             :show-markers="dischargeSettled"
+            :raise-legend="showTimeline && isWide"
             @basemap="basemap = $event"
           />
           <div class="glass absolute top-3 right-3 z-[1000] rounded-[10px] shadow-float">
@@ -135,17 +136,16 @@ const mapHeight = computed(() => {
             />
           </div>
           <!--
-            A wide map card: bottom right, beside the legend (bottom left). A narrow one (a station
-            open beside it): top, under the layer switch and clear of the zoom buttons. Phones: a
-            card of its own under the map, below.
+            Bottom right of the map card, beside the legend (bottom left); a narrow card (a station
+            open beside it) lifts the legend above it. Phones: a card of its own under the map.
           -->
           <div
             v-if="showTimeline && isWide"
-            class="pointer-events-none absolute inset-x-3 top-15 z-[1000] flex justify-center pl-11 @2xl:top-auto @2xl:bottom-2.5 @2xl:justify-end @2xl:pl-0"
+            class="pointer-events-none absolute inset-x-2.5 bottom-2.5 z-[1000] flex justify-end"
           >
             <MapTimeline
               v-model="mapDate"
-              class="w-full max-w-sm"
+              class="w-full max-w-80"
               :today="today"
               :past-days="TIMELINE_PAST_DAYS"
               :future-days="OUTLOOK_DAYS"
