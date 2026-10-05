@@ -89,3 +89,8 @@ export function formatPlainDate(date: string, locale: Locale = 'uk'): string {
 export function formatDayMonth(date: string, locale: Locale = 'uk'): string {
   return formatters(locale).dayMonth.format(new Date(`${assertDate(date)}T00:00:00Z`))
 }
+
+/** Inclusive year range with an en dash: `1997–2010`. */
+export function formatYearRange({ from, to }: { from: number; to: number }): string {
+  return `${from}–${to}`
+}

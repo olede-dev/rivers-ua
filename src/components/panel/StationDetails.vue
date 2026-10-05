@@ -10,12 +10,14 @@ import { buildChartSeries } from '../../lib/chartSeries'
 import { downloadCsv, stationCsv } from '../../lib/csv'
 import { formatCoordinates, formatDischarge, formatPct } from '../../lib/format'
 import { useUiStore, type ChartRange } from '../../stores/ui'
-import type { DischargeSeries, StationNorms, StationState } from '../../types'
+import type { ClimateSummary } from '../../lib/climate'
+import type { ClimateFile, DischargeSeries, StationNorms, StationState } from '../../types'
 import AnomalyBadge from '../ui/AnomalyBadge.vue'
 import ErrorState from '../ui/ErrorState.vue'
 import LoadingSkeleton from '../ui/LoadingSkeleton.vue'
 import OutlookBadge from '../ui/OutlookBadge.vue'
 import ChartControls from './ChartControls.vue'
+import ClimateSection from './ClimateSection.vue'
 import DischargeChart from './DischargeChart.vue'
 import StatRow from './StatRow.vue'
 
@@ -29,8 +31,12 @@ const props = defineProps<{
   status: 'pending' | 'error' | 'success'
   /** Shown when `status` is `error`. */
   errorMessage: string
+  climate: ClimateFile | undefined
+  climateSummary: ClimateSummary | null
+  climateStatus: 'pending' | 'error' | 'success'
+  thisYearFailed: boolean
 }>()
-defineEmits<{ retry: [] }>()
+defineEmits<{ retry: []; retryClimate: [] }>()
 
 /** The short period shows 30 past days; the longer ones show 60, all the data request holds. */
 const PAST_DAYS: Record<ChartRange, number> = { 30: 30, 90: 60, 210: 60 }
@@ -204,5 +210,14 @@ onMounted(() => heading.value?.focus())
         <template v-if="ui.showPrecip"> {{ t.details.precipitationNote }}</template>
       </p>
     </section>
+
+    <ClimateSection
+      :climate="climate"
+      :summary="climateSummary"
+      :status="climateStatus"
+      :this-year-failed="thisYearFailed"
+      :today="today"
+      @retry="$emit('retryClimate')"
+    />
   </article>
 </template>

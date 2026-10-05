@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+import type { MapLayer } from '../config/climateClasses'
 import {
   DEFAULT_URL_STATE,
   type BasinFilterValue,
@@ -18,6 +19,7 @@ export const useUiStore = defineStore('ui', () => {
   const range = ref<ChartRange>(DEFAULT_URL_STATE.range)
   const mode = ref<ChartMode>(DEFAULT_URL_STATE.mode)
   const showPrecip = ref(DEFAULT_URL_STATE.precip)
+  const layer = ref<MapLayer>(DEFAULT_URL_STATE.layer)
   /** Stations sidebar: a docked panel on wide screens, a drawer on narrow ones. Not in the URL. */
   const sidebarOpen = ref(false)
 
@@ -32,6 +34,7 @@ export const useUiStore = defineStore('ui', () => {
       range: range.value,
       mode: mode.value,
       precip: showPrecip.value,
+      layer: layer.value,
     }
   }
 
@@ -41,6 +44,7 @@ export const useUiStore = defineStore('ui', () => {
     range.value = state.range
     mode.value = state.mode
     showPrecip.value = state.precip
+    layer.value = state.layer
   }
 
   return {
@@ -49,6 +53,7 @@ export const useUiStore = defineStore('ui', () => {
     range,
     mode,
     showPrecip,
+    layer,
     sidebarOpen,
     selectStation,
     toUrlState,

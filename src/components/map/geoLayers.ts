@@ -1,6 +1,5 @@
 import L from 'leaflet'
 
-import { ANOMALY_CLASS_INFO } from '../../config/anomalyClasses'
 import type { BorderFile, RiversFile } from '../../config/geo'
 import type { Position } from '../../lib/geometry'
 import { assignRiverReach, type SegmentReach } from '../../lib/riverReach'
@@ -198,18 +197,17 @@ export function createRiversLayer(
 }
 
 /**
- * Rivers near a station take its water-state colour, fading back to the plain river colour
- * with network distance. The normal class keeps the plain colour, so only anomalies stand out.
- * Tinted reaches are drawn a little thicker so the colour reads at country zoom.
+ * Rivers near a station take its tint (`tints`, by station id), fading back to the plain river
+ * colour with network distance. A `null` tint keeps the plain colour, so only notable stations
+ * stand out. Tinted reaches are drawn a little thicker so the colour reads at country zoom.
  */
 export function styleRivers(
   layer: L.FeatureGroup,
-  states: readonly StationState[],
+  tints: ReadonlyMap<string, string | null>,
   zoom: number,
   dark: boolean,
 ): void {
   const base = geoColors(dark).river
-  const classOf = new Map(states.map((s) => [s.station.id, s.anomalyClass]))
   layer.eachLayer((child) => {
     const flowLayer =
       ((child as L.GeoJSON).options as L.PathOptions).className?.includes('river-flow') === true
@@ -217,8 +215,7 @@ export function styleRivers(
       const props = feature?.properties ?? { major: false }
       const weight = riverWeight(props.major === true, zoom)
       if (flowLayer) return { weight: Math.max(1.2, weight * 0.7) }
-      const anomaly = props.tintId === undefined ? null : classOf.get(props.tintId)
-      const color = anomaly && anomaly !== 'normal' ? ANOMALY_CLASS_INFO[anomaly].color : null
+      const color = props.tintId === undefined ? null : (tints.get(props.tintId) ?? null)
       if (!color) return { color: base, opacity: props.major ? 0.85 : 0.6, weight }
       return {
         color: mix(color, base, (props.tintStep ?? 0) / FADE_STEPS),

@@ -5,12 +5,16 @@ import AppFooter from '../components/layout/AppFooter.vue'
 import AppHeader from '../components/layout/AppHeader.vue'
 import StationsSidebar from '../components/layout/StationsSidebar.vue'
 import MapTimeline from '../components/map/MapTimeline.vue'
+import { legendContent, mapMarks } from '../components/map/mapMarks'
 import RiverMap from '../components/map/RiverMap.vue'
 import LoadingSkeleton from '../components/ui/LoadingSkeleton.vue'
+import SegmentedControl from '../components/ui/SegmentedControl.vue'
+import { useClimate } from '../composables/useClimate'
 import { useLocale } from '../composables/useLocale'
 import { useMediaQuery } from '../composables/useMediaQuery'
 import { useStationsState } from '../composables/useStationsState'
 import { useUrlSync } from '../composables/useUrlSync'
+import { MAP_LAYERS } from '../config/climateClasses'
 import { DISCHARGE_WINDOW } from '../config/discharge'
 import { dischargeErrorMessage, snapshotNotice } from '../lib/dischargeMessages'
 import { OUTLOOK_DAYS } from '../lib/anomaly'
@@ -40,6 +44,32 @@ const errorMessage = computed(() =>
 const notice = computed(() => snapshotNotice(discharge.data.value?.source, locale.value))
 const selected = computed(() => states.value.find((s) => s.station.id === ui.selectedId) ?? null)
 
+// Climate data loads only once a climate layer or a station panel needs it.
+const climate = useClimate(
+  () => norms.data.value,
+  () => ui.layer !== 'state' || selected.value !== null,
+)
+const layerOptions = computed(() =>
+  MAP_LAYERS.map((value) => ({ value, label: t.value.climate.layers[value] })),
+)
+/** The timelapse moves the water state only; climate layers always show today. */
+const marks = computed(() =>
+  mapMarks(
+    ui.layer,
+    ui.layer === 'state' ? mapStates.value : states.value,
+    climate.summaries.value,
+    locale.value,
+    t.value,
+  ),
+)
+const legend = computed(() => legendContent(ui.layer, t.value, climate.climate.data.value))
+watch(
+  () => ui.layer,
+  (layer) => {
+    if (layer !== 'state') mapDate.value = today
+  },
+)
+
 // Tailwind's `lg`: the sidebar docks beside the map and starts open; below it, a closed drawer.
 const isDesktop = useMediaQuery('(min-width: 64rem)')
 watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
@@ -62,15 +92,29 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
           :class="selected ? 'h-[45dvh]' : 'h-[calc(100dvh-7rem)]'"
           :aria-label="t.home.map"
         >
-          <RiverMap :states="mapStates" :show-markers="dischargeSettled" />
+          <RiverMap
+            :states="ui.layer === 'state' ? mapStates : states"
+            :marks="marks"
+            :legend="legend"
+            :show-markers="dischargeSettled"
+          />
+          <div
+            class="absolute top-2.5 right-2.5 z-[1000] rounded-md bg-white/95 shadow dark:bg-slate-900/95"
+          >
+            <SegmentedControl
+              v-model="ui.layer"
+              :label="t.climate.layerLabel"
+              :options="layerOptions"
+            />
+          </div>
           <!--
             Phones: top of the map, clear of the zoom buttons, since the legend and attribution fill
             the bottom. Wider screens: bottom right, above the attribution and away from the
             legend (bottom left). Above Leaflet's panes and controls (z-index up to 1000).
           -->
           <div
-            v-if="discharge.isSuccess.value"
-            class="pointer-events-none absolute inset-x-0 top-2.5 z-[1000] flex justify-center pr-2.5 pl-14 sm:top-auto sm:bottom-7 sm:justify-end sm:pl-2.5"
+            v-if="discharge.isSuccess.value && ui.layer === 'state'"
+            class="pointer-events-none absolute inset-x-0 top-14 z-[1000] flex justify-center pr-2.5 pl-14 sm:top-auto sm:bottom-7 sm:justify-end sm:pl-2.5"
           >
             <MapTimeline
               v-model="mapDate"
@@ -91,10 +135,15 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
             :state="selected"
             :series="discharge.data.value?.series.get(selected.station.id)"
             :norms="norms.data.value?.stations[selected.station.id] ?? null"
+            :climate="climate.climate.data.value"
+            :climate-summary="climate.summaries.value.get(selected.station.id) ?? null"
+            :climate-status="climate.climate.status.value"
+            :this-year-failed="climate.thisYear.isError.value"
             :today="today"
             :status="discharge.status.value"
             :error-message="errorMessage ?? ''"
             @retry="discharge.refetch()"
+            @retry-climate="climate.climate.refetch()"
           />
         </aside>
         <div

@@ -1,7 +1,7 @@
 import L from 'leaflet'
 
-import { ANOMALY_CLASSES, NO_DATA_STROKE } from '../../config/anomalyClasses'
-import type { Messages } from '../../i18n'
+import { NO_DATA_STROKE } from '../../config/anomalyClasses'
+import type { LegendContent } from './mapMarks'
 
 /** Below this width the legend starts collapsed so it does not cover southern markers. */
 const EXPANDED_LEGEND_QUERY = '(min-width: 640px)'
@@ -19,12 +19,12 @@ function swatch(color: string | null): string {
 
 export interface MapLegend {
   control: L.Control
-  /** Rewrites the text in another language; the open or collapsed state stays. */
-  setMessages(messages: Messages): void
+  /** Rewrites the rows for another layer or language; the open or collapsed state stays. */
+  setContent(content: LegendContent): void
 }
 
-/** Collapsible legend of the water-state classes, bottom-left of the map. */
-export function createMapLegend(initial: Messages): MapLegend {
+/** Collapsible legend of the current layer's classes, bottom-left of the map. */
+export function createMapLegend(initial: LegendContent): MapLegend {
   const control = new L.Control({ position: 'bottomleft' })
   const element = L.DomUtil.create(
     'details',
@@ -33,15 +33,17 @@ export function createMapLegend(initial: Messages): MapLegend {
   element.open = window.matchMedia(EXPANDED_LEGEND_QUERY).matches
   L.DomEvent.disableClickPropagation(element)
 
-  function setMessages(messages: Messages) {
-    const rows = ANOMALY_CLASSES.map(
-      (c) =>
-        `<li class="flex items-center gap-2">${swatch(c.color)}${messages.anomalyClasses[c.id]}</li>`,
-    ).join('')
-    element.innerHTML = `<summary class="cursor-pointer font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400">${messages.map.legendTitle}</summary><ul class="mt-1 space-y-0.5 text-slate-700 dark:text-slate-300">${rows}</ul>`
+  function setContent({ title, rows: entries, note }: LegendContent) {
+    const rows = entries
+      .map((r) => `<li class="flex items-center gap-2">${swatch(r.color)}${r.label}</li>`)
+      .join('')
+    const noteHtml = note
+      ? `<p class="mt-1 max-w-48 text-[10px] text-slate-500 dark:text-slate-400">${note}</p>`
+      : ''
+    element.innerHTML = `<summary class="cursor-pointer font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400">${title}</summary><ul class="mt-1 space-y-0.5 text-slate-700 dark:text-slate-300">${rows}</ul>${noteHtml}`
   }
 
-  setMessages(initial)
+  setContent(initial)
   control.onAdd = () => element
-  return { control, setMessages }
+  return { control, setContent }
 }

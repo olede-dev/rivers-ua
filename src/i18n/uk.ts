@@ -1,3 +1,4 @@
+import type { LowFlowClass, MapLayer, TrendClass } from '../config/climateClasses'
 import type { AnomalyClass, BasinId } from '../types'
 
 /** Ukrainian UI copy; the source of truth for the `Messages` shape every locale fills. */
@@ -136,6 +137,57 @@ export const uk = {
       forecast: 'прогноз',
       past: 'спостереження',
     },
+  },
+  climate: {
+    layerLabel: 'Що показує карта',
+    layers: { state: 'Стан', trend: 'Тренд', lowFlow: 'Маловоддя' } satisfies Record<
+      MapLayer,
+      string
+    >,
+    trendLegend: 'Зміна середнього стоку',
+    trendNote: (recent: string, baseline: string) => `${recent} проти ${baseline}`,
+    trendTooltip: (pct: string) => `тренд стоку ${pct}`,
+    trendClasses: {
+      'strong-decrease': 'Сильне зменшення (понад −30%)',
+      decrease: 'Зменшення (−10…−30%)',
+      stable: 'Без суттєвих змін (±10%)',
+      increase: 'Зростання (+10…+30%)',
+      'strong-increase': 'Сильне зростання (понад +30%)',
+    } satisfies Record<TrendClass, string>,
+    lowFlowLegend: 'Днів маловоддя з 1 січня',
+    lowFlowNote: 'День маловоддя — витрата нижче p10 норми',
+    lowFlowClasses: {
+      none: 'Жодного',
+      few: '1–14 днів',
+      some: '15–44 дні',
+      many: '45–89 днів',
+      extreme: '90 днів і більше',
+    } satisfies Record<LowFlowClass, string>,
+    days: (n: number) => {
+      const mod10 = n % 10
+      const mod100 = n % 100
+      const word =
+        mod10 === 1 && mod100 !== 11
+          ? 'день'
+          : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+            ? 'дні'
+            : 'днів'
+      return `${n} ${word}`
+    },
+    heading: 'Клімат: як змінюється річка',
+    meanChange: 'Середній стік',
+    lowSeasonChange: 'Стік у межень (липень–жовтень)',
+    periods: (recent: string, baseline: string) =>
+      `Зміна середнього за ${recent} проти ${baseline}.`,
+    thisYear: 'Днів маловоддя цього року',
+    baselineMean: (period: string) => `У середньому за ${period}`,
+    chartHeading: (date: string) => `Днів маловоддя з 1 січня по ${date}, за роками`,
+    chartAria: 'Стовпчики: кількість днів маловоддя за однаковий період кожного року',
+    chartNote:
+      'День маловоддя — день, коли витрата нижча за p10 норми 1991–2020 для цього дня року. Дані реаналізу GloFAS доступні з 1997 року.',
+    loading: 'Завантаження кліматичних даних…',
+    failed: 'Кліматичні дані не завантажилися.',
+    thisYearFailed: 'Дані цього року не завантажилися — показано лише минулі роки.',
   },
   /** m³/s; also the chart's absolute mode label. */
   dischargeUnit: 'м³/с',

@@ -7,9 +7,9 @@ import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 import { useLocale } from '../../composables/useLocale'
 import { useRivers, useUkraineBorder } from '../../composables/useMapGeo'
 import { useTheme } from '../../composables/useTheme'
-import { ANOMALY_CLASS_INFO, NO_DATA_STROKE } from '../../config/anomalyClasses'
+import { NO_DATA_STROKE } from '../../config/anomalyClasses'
 import { stationName } from '../../i18n'
-import { formatDischarge, formatPct } from '../../lib/format'
+import { formatDischarge } from '../../lib/format'
 import { useUiStore } from '../../stores/ui'
 import type { StationState } from '../../types'
 import { addBasemap } from './basemap'
@@ -23,9 +23,13 @@ import {
   styleRivers,
 } from './geoLayers'
 import { createMapLegend, type MapLegend } from './MapLegend'
+import { UNCLASSIFIED_FILL, type LegendContent, type MapMark } from './mapMarks'
 
 const props = defineProps<{
   states: readonly StationState[]
+  /** How each station looks in the current layer, by station id. */
+  marks: ReadonlyMap<string, MapMark>
+  legend: LegendContent
   /** Markers appear only once discharge has loaded or failed. */
   showMarkers: boolean
 }>()
@@ -40,8 +44,6 @@ const MARKER_STROKES = {
   light: { ring: '#ffffff', selected: '#0f172a' },
   dark: { ring: '#0f172a', selected: '#ffffff' },
 }
-/** Fill when norms are unavailable and no class can be assigned. */
-const UNCLASSIFIED_FILL = '#94a3b8'
 
 const ui = useUiStore()
 const rivers = useRivers()
@@ -58,14 +60,12 @@ let viewTouched = false
 const markers = new Map<string, L.CircleMarker>()
 /** Expanding rings behind strongly anomalous stations; see `.marker-pulse` in main.css. */
 const pulses = new Map<string, L.CircleMarker>()
-/** Deviation from the median norm, in percent, from which a station pulses. */
-const PULSE_PCT = 50
 let riversLayer: L.FeatureGroup | undefined
 /** Flow speeds the river paths were built with; other state changes only restyle them. */
 let riversFlow: string | undefined
 let borderLayer: L.LayerGroup | undefined
 let setBasemapTheme: ((dark: boolean) => void) | undefined
-let legend: MapLegend | undefined
+let legendControl: MapLegend | undefined
 
 /**
  * Leaflet's SVG renderer only CSS-scales its layer on each `zoom` event and redraws on
@@ -89,10 +89,12 @@ function markerRadius(meanAnnual: number | null): number {
   return Math.min(16, Math.max(6, 5 + 2.5 * Math.log10(meanAnnual)))
 }
 
-function markerStyle(state: StationState, selected: boolean): L.CircleMarkerOptions {
-  const color = state.anomalyClass
-    ? ANOMALY_CLASS_INFO[state.anomalyClass].color
-    : UNCLASSIFIED_FILL
+function markOf(id: string): MapMark {
+  return props.marks.get(id) ?? { fill: UNCLASSIFIED_FILL, tint: null, pulse: false, detail: null }
+}
+
+function markerStyle(mark: MapMark, selected: boolean): L.CircleMarkerOptions {
+  const color = mark.fill
   const strokes = isDark.value ? MARKER_STROKES.dark : MARKER_STROKES.light
   const base = color
     ? { fillColor: color, fillOpacity: 0.95, color: strokes.ring, weight: 1.5 }
@@ -100,23 +102,21 @@ function markerStyle(state: StationState, selected: boolean): L.CircleMarkerOpti
   return selected ? { ...base, color: strokes.selected, weight: 3 } : base
 }
 
-function tooltipText({ station, current, anomalyPct }: StationState): string {
+function tooltipText({ station, current }: StationState, mark: MapMark): string {
   const { river, place } = stationName(station, locale.value)
   const parts = [
     `${river} — ${place}`,
     `${formatDischarge(current, locale.value)} ${t.value.dischargeUnit}`,
   ]
-  if (anomalyPct !== null) parts.push(formatPct(anomalyPct, locale.value))
+  if (mark.detail !== null) parts.push(mark.detail)
   return parts.join(' · ')
 }
 
-function syncPulse(state: StationState, visible: boolean) {
+function syncPulse(state: StationState, mark: MapMark, visible: boolean) {
   const { id, marker: position } = state.station
-  const color = state.anomalyClass ? ANOMALY_CLASS_INFO[state.anomalyClass].color : null
-  const strong =
-    color !== null && state.anomalyPct !== null && Math.abs(state.anomalyPct) >= PULSE_PCT
+  const color = mark.fill
   let pulse = pulses.get(id)
-  if (!strong || !visible) {
+  if (!mark.pulse || color === null || !visible) {
     pulse?.remove()
     return
   }
@@ -144,16 +144,23 @@ function syncMarkers() {
       markers.set(id, marker)
     }
     const selected = ui.selectedId === id
-    marker.setStyle(markerStyle(state, selected))
+    const mark = markOf(id)
+    marker.setStyle(markerStyle(mark, selected))
     marker.setRadius(markerRadius(state.meanAnnual))
-    marker.setTooltipContent(tooltipText(state))
+    marker.setTooltipContent(tooltipText(state, mark))
 
     const visible = ui.basin === 'all' || basin === ui.basin
     if (visible && !map.hasLayer(marker)) marker.addTo(map)
     if (!visible && map.hasLayer(marker)) marker.remove()
     if (visible && selected) marker.bringToFront()
-    syncPulse(state, visible)
+    syncPulse(state, mark, visible)
   }
+}
+
+/** No tints until markers show, so rivers do not flash colours before data arrives. */
+function riverTints(): Map<string, string | null> {
+  if (!props.showMarkers) return new Map()
+  return new Map([...props.marks].map(([id, mark]) => [id, mark.tint]))
 }
 
 function syncGeoLayers() {
@@ -174,7 +181,7 @@ function syncGeoLayers() {
     )
     riversLayer.addTo(map)
   }
-  if (riversLayer) styleRivers(riversLayer, states, map.getZoom(), isDark.value)
+  if (riversLayer) styleRivers(riversLayer, riverTints(), map.getZoom(), isDark.value)
   if (!borderLayer && border.data.value) {
     borderLayer = createBorderLayer(
       border.data.value,
@@ -229,11 +236,11 @@ onMounted(() => {
   resetView()
   map.on('zoomend', () => {
     if (map && riversLayer) {
-      styleRivers(riversLayer, props.showMarkers ? props.states : [], map.getZoom(), isDark.value)
+      styleRivers(riversLayer, riverTints(), map.getZoom(), isDark.value)
     }
   })
-  legend = createMapLegend(t.value)
-  legend.control.addTo(map)
+  legendControl = createMapLegend(props.legend)
+  legendControl.control.addTo(map)
 
   // A container measured while hidden or mid-layout gives a wrong initial view; reset it on resize.
   const markTouched = () => (viewTouched = true)
@@ -259,14 +266,23 @@ onBeforeUnmount(() => {
   riversLayer = undefined
   borderLayer = undefined
   setBasemapTheme = undefined
-  legend = undefined
+  legendControl = undefined
 })
 
-watch(() => [props.states, props.showMarkers, ui.basin, ui.selectedId, locale.value], syncMarkers)
+watch(
+  () => [props.states, props.marks, props.showMarkers, ui.basin, ui.selectedId, locale.value],
+  syncMarkers,
+)
 watch(() => ui.selectedId, focusSelection)
-watch(() => [rivers.data.value, border.data.value, props.states, props.showMarkers], syncGeoLayers)
+watch(
+  () => [rivers.data.value, border.data.value, props.states, props.marks, props.showMarkers],
+  syncGeoLayers,
+)
 watch(isDark, applyTheme)
-watch(t, (messages) => legend?.setMessages(messages))
+watch(
+  () => props.legend,
+  (content) => legendControl?.setContent(content),
+)
 </script>
 
 <template>

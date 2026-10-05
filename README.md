@@ -64,6 +64,7 @@ npm run dev
 | `npm test`                  | тести Vitest                                          |
 | `npm run validate:stations` | перевірка координат станцій через Open-Meteo          |
 | `npm run build:norms`       | перерахунок норм 1991–2020 у `public/data/norms.json` |
+| `npm run build:climate`     | тренд стоку і дні маловоддя за роками у `public/data/climate.json` (після `build:norms`) |
 | `npm run build:geo`         | лінії річок і кордон України (Natural Earth 1:10m, з Кримом) у `public/data/*.geojson` |
 | `npm run build:snapshot`    | запасний знімок витрат у `public/data/discharge-snapshot.json` (не комітиться; CI робить його перед кожним деплоєм і щодня) |
 

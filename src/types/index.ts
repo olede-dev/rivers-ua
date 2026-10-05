@@ -87,3 +87,21 @@ export interface StationState {
   /** Signed whole percent deviation from the median norm. */
   anomalyPct: number | null
 }
+
+export interface StationClimate {
+  /** Mean discharge change from the baseline to the recent period, whole percent. */
+  meanChangePct: number | null
+  /** The same change over the July–October low-water season. */
+  lowSeasonChangePct: number | null
+  /** Low-flow days (day of year below the p10 norm) per year from `years.from`. */
+  lowFlowDays: number[][]
+}
+
+/** `public/data/climate.json`, built by `npm run build:climate`. */
+export interface ClimateFile {
+  baseline: { from: number; to: number }
+  recent: { from: number; to: number }
+  years: { from: number; to: number }
+  source: string
+  stations: Record<string, StationClimate>
+}

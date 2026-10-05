@@ -17,12 +17,26 @@ describe('parseUrlState', () => {
   it('reads every shared field from the SPEC example URL', () => {
     expect(
       parse({ station: 'dnipro-kyiv', basin: 'dnipro', range: '90', mode: 'pct', precip: '1' }),
-    ).toEqual({ station: 'dnipro-kyiv', basin: 'dnipro', range: 90, mode: 'pct', precip: true })
+    ).toEqual({
+      station: 'dnipro-kyiv',
+      basin: 'dnipro',
+      range: 90,
+      mode: 'pct',
+      precip: true,
+      layer: 'state',
+    })
   })
 
   it('falls back to defaults for unknown or malformed values', () => {
     expect(
-      parse({ station: 'tisza-chop', basin: 'volga', range: '45', mode: 'log', precip: 'yes' }),
+      parse({
+        station: 'tisza-chop',
+        basin: 'volga',
+        range: '45',
+        mode: 'log',
+        precip: 'yes',
+        layer: 'rain',
+      }),
     ).toEqual(DEFAULT_URL_STATE)
   })
 
@@ -43,6 +57,7 @@ describe('toUrlQuery', () => {
       range: 210,
       mode: 'pct',
       precip: true,
+      layer: 'lowFlow',
     }
     expect(parse(toUrlQuery(state))).toEqual(state)
   })

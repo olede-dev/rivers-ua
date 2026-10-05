@@ -1,3 +1,4 @@
+import { MAP_LAYERS, type MapLayer } from '../config/climateClasses'
 import type { BasinId } from '../types'
 
 export type BasinFilterValue = BasinId | 'all'
@@ -12,6 +13,7 @@ export interface UrlState {
   range: ChartRange
   mode: ChartMode
   precip: boolean
+  layer: MapLayer
 }
 
 export const DEFAULT_URL_STATE: Readonly<UrlState> = {
@@ -20,6 +22,7 @@ export const DEFAULT_URL_STATE: Readonly<UrlState> = {
   range: 90,
   mode: 'abs',
   precip: false,
+  layer: 'state',
 }
 
 const RANGES: readonly ChartRange[] = [30, 90, 210]
@@ -48,6 +51,7 @@ export function parseUrlState(
     range: pick(first(query.range), RANGES, DEFAULT_URL_STATE.range),
     mode: pick(first(query.mode), MODES, DEFAULT_URL_STATE.mode),
     precip: first(query.precip) === '1',
+    layer: pick(first(query.layer), MAP_LAYERS, DEFAULT_URL_STATE.layer),
   }
 }
 
@@ -59,5 +63,6 @@ export function toUrlQuery(state: UrlState): Record<string, string> {
   if (state.range !== DEFAULT_URL_STATE.range) query.range = String(state.range)
   if (state.mode !== DEFAULT_URL_STATE.mode) query.mode = state.mode
   if (state.precip) query.precip = '1'
+  if (state.layer !== DEFAULT_URL_STATE.layer) query.layer = state.layer
   return query
 }
