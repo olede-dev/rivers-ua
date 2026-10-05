@@ -14,7 +14,7 @@ import { useLocale } from '../composables/useLocale'
 import { useMediaQuery } from '../composables/useMediaQuery'
 import { useStationsState } from '../composables/useStationsState'
 import { useUrlSync } from '../composables/useUrlSync'
-import { MAP_LAYERS } from '../config/climateClasses'
+import { MAP_LAYERS, type MapLayer } from '../config/climateClasses'
 import { DISCHARGE_WINDOW } from '../config/discharge'
 import { dischargeErrorMessage, snapshotNotice } from '../lib/dischargeMessages'
 import { OUTLOOK_DAYS } from '../lib/anomaly'
@@ -49,8 +49,20 @@ const climate = useClimate(
   () => norms.data.value,
   () => ui.layer !== 'state' || selected.value !== null,
 )
+const LAYER_ICONS: Record<MapLayer, string> = {
+  // A pulse line: the water state right now.
+  state: 'M3 12h4l3-8 4 16 3-8h4',
+  // A rising line: the long-term change.
+  trend: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+  // A drop with a low water level: how often rivers run low.
+  lowFlow: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11zM7 16h10',
+}
 const layerOptions = computed(() =>
-  MAP_LAYERS.map((value) => ({ value, label: t.value.climate.layers[value] })),
+  MAP_LAYERS.map((value) => ({
+    value,
+    label: t.value.climate.layers[value],
+    icon: LAYER_ICONS[value],
+  })),
 )
 /** The timelapse moves the water state only; climate layers always show today. */
 const marks = computed(() =>
