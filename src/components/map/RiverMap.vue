@@ -50,8 +50,6 @@ const props = defineProps<{
   legend: LegendContent
   /** Markers appear only once discharge has loaded or failed. */
   showMarkers: boolean
-  /** The timeline sits at the bottom right; a map too narrow for both lifts the legend over it. */
-  raiseLegend: boolean
 }>()
 const emit = defineEmits<{ basemap: [kind: BasemapKind] }>()
 
@@ -353,10 +351,17 @@ watch([isDark, locale], applyStyle)
 <template>
   <div class="relative size-full">
     <div ref="container" class="size-full" role="region" :aria-label="t.map.ariaLabel"></div>
-    <MapLegend
-      :content="legend"
-      class="absolute left-2.5 z-[1000]"
-      :class="raiseLegend ? 'bottom-20 @min-[34rem]:bottom-2.5' : 'bottom-2.5'"
-    />
+    <!--
+      Legend bottom left; the default slot (the timeline) fills the rest of the row, bottom right.
+      Only a map too narrow for both wraps the slot under the legend.
+    -->
+    <div
+      class="pointer-events-none absolute inset-x-2.5 bottom-2.5 z-[1000] flex flex-wrap items-end gap-2.5"
+    >
+      <MapLegend :content="legend" class="pointer-events-auto shrink-0" />
+      <div v-if="$slots.default" class="flex min-w-60 flex-1 justify-end">
+        <slot />
+      </div>
+    </div>
   </div>
 </template>

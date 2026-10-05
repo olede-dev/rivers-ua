@@ -125,30 +125,24 @@ const mapHeight = computed(() => {
             :marks="marks"
             :legend="legend"
             :show-markers="dischargeSettled"
-            :raise-legend="showTimeline && isWide"
             @basemap="basemap = $event"
-          />
+          >
+            <!-- Beside the legend, bottom right; phones: a card of its own under the map. -->
+            <template v-if="showTimeline && isWide" #default>
+              <MapTimeline
+                v-model="mapDate"
+                class="w-full max-w-80"
+                :today="today"
+                :past-days="TIMELINE_PAST_DAYS"
+                :future-days="OUTLOOK_DAYS"
+              />
+            </template>
+          </RiverMap>
           <div class="glass absolute top-3 right-3 z-[1000] rounded-[10px] shadow-float">
             <SegmentedControl
               v-model="ui.layer"
               :label="t.climate.layerLabel"
               :options="layerOptions"
-            />
-          </div>
-          <!--
-            Bottom right of the map card, beside the legend (bottom left); a narrow card (a station
-            open beside it) lifts the legend above it. Phones: a card of its own under the map.
-          -->
-          <div
-            v-if="showTimeline && isWide"
-            class="pointer-events-none absolute inset-x-2.5 bottom-2.5 z-[1000] flex justify-end"
-          >
-            <MapTimeline
-              v-model="mapDate"
-              class="w-full max-w-80"
-              :today="today"
-              :past-days="TIMELINE_PAST_DAYS"
-              :future-days="OUTLOOK_DAYS"
             />
           </div>
         </section>
