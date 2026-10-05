@@ -45,14 +45,6 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
       {{ notice }}
     </p>
     <div class="flex flex-1 lg:min-h-0">
-      <StationsSidebar
-        :states="states"
-        :modal="!isDesktop"
-        :pending="discharge.isPending.value"
-        :discharge-error-message="errorMessage"
-        :norms-error="norms.isError.value"
-        @retry="discharge.refetch()"
-      />
       <main class="flex min-w-0 flex-1 flex-col lg:flex-row">
         <section
           class="isolate shrink-0 lg:h-auto lg:min-w-0 lg:flex-1"
@@ -91,6 +83,14 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
           </button>
         </div>
       </main>
+      <StationsSidebar
+        :states="states"
+        :modal="!isDesktop"
+        :pending="discharge.isPending.value"
+        :discharge-error-message="errorMessage"
+        :norms-error="norms.isError.value"
+        @retry="discharge.refetch()"
+      />
     </div>
     <AppFooter />
   </div>
