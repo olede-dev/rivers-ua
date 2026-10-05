@@ -9,7 +9,5 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
-    // Stage 0 ships no tests yet; remove once tests/ is populated.
-    passWithNoTests: true,
   },
 })
