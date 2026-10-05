@@ -4,11 +4,20 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 
+import { useRivers, useUkraineBorder } from '../../composables/useMapGeo'
 import { ANOMALY_CLASS_INFO, NO_DATA_STROKE } from '../../config/anomalyClasses'
 import { formatDischarge, formatPct } from '../../lib/format'
 import { useUiStore } from '../../stores/ui'
 import type { StationState } from '../../types'
 import { addBasemap } from './basemap'
+import {
+  BORDER_PANE,
+  createBorderLayer,
+  createGeoPanes,
+  createRiversLayer,
+  restyleRivers,
+  RIVERS_PANE,
+} from './geoLayers'
 import { createMapLegend } from './MapLegend'
 
 const props = defineProps<{
@@ -27,6 +36,8 @@ const SELECTED_STROKE = '#0f172a'
 const UNCLASSIFIED_FILL = '#94a3b8'
 
 const ui = useUiStore()
+const rivers = useRivers()
+const border = useUkraineBorder()
 const container = useTemplateRef<HTMLDivElement>('container')
 
 // Leaflet objects stay outside Vue reactivity: proxies break them.
@@ -35,6 +46,8 @@ let resizeObserver: ResizeObserver | undefined
 /** Set once the user pans or zooms; until then a resize restores the initial view. */
 let viewTouched = false
 const markers = new Map<string, L.CircleMarker>()
+let riversLayer: L.GeoJSON | undefined
+let borderLayer: L.LayerGroup | undefined
 
 /**
  * Leaflet's SVG renderer only CSS-scales its layer on each `zoom` event and redraws on
@@ -51,7 +64,7 @@ const FixedSizeSvg = L.SVG.extend({
     if (this._map._animatingZoom) (L.SVG.prototype as SvgInternals)._onZoom.call(this)
     else this._reset()
   },
-}) as unknown as new () => L.SVG
+}) as unknown as new (options?: L.RendererOptions) => L.SVG
 
 function markerRadius(meanAnnual: number | null): number {
   if (meanAnnual === null || meanAnnual <= 0) return 8
@@ -96,6 +109,19 @@ function syncMarkers() {
   }
 }
 
+function syncGeoLayers() {
+  if (!map) return
+  if (!riversLayer && rivers.data.value) {
+    riversLayer = createRiversLayer(rivers.data.value, new FixedSizeSvg({ pane: RIVERS_PANE }))
+    restyleRivers(riversLayer, map.getZoom())
+    riversLayer.addTo(map)
+  }
+  if (!borderLayer && border.data.value) {
+    borderLayer = createBorderLayer(border.data.value, new FixedSizeSvg({ pane: BORDER_PANE }))
+    borderLayer.addTo(map)
+  }
+}
+
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
@@ -125,7 +151,11 @@ onMounted(() => {
   if (!container.value) return
   map = L.map(container.value, { minZoom: 4, zoomSnap: 0.25, renderer: new FixedSizeSvg() })
   addBasemap(map)
+  createGeoPanes(map)
   resetView()
+  map.on('zoomend', () => {
+    if (map && riversLayer) restyleRivers(riversLayer, map.getZoom())
+  })
   createMapLegend().addTo(map)
 
   // A container measured while hidden or mid-layout gives a wrong initial view; reset it on resize.
@@ -140,6 +170,7 @@ onMounted(() => {
   })
   resizeObserver.observe(container.value)
   syncMarkers()
+  syncGeoLayers()
 })
 
 onBeforeUnmount(() => {
@@ -147,10 +178,13 @@ onBeforeUnmount(() => {
   map?.remove()
   map = undefined
   markers.clear()
+  riversLayer = undefined
+  borderLayer = undefined
 })
 
 watch(() => [props.states, props.showMarkers, ui.basin, ui.selectedId], syncMarkers)
 watch(() => ui.selectedId, focusSelection)
+watch(() => [rivers.data.value, border.data.value], syncGeoLayers)
 </script>
 
 <template>

@@ -14,7 +14,8 @@
     "test": "vitest",
     "validate:stations": "tsx scripts/validate-stations.ts",
     "build:norms": "tsx scripts/build-norms.ts",
-    "build:snapshot": "tsx scripts/build-snapshot.ts"
+    "build:snapshot": "tsx scripts/build-snapshot.ts",
+    "build:geo": "tsx scripts/build-geo.ts"
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.104.1",
