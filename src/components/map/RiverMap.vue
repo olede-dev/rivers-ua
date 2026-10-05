@@ -18,8 +18,8 @@ import {
   createBorderLayer,
   createGeoPanes,
   createRiversLayer,
-  flowSignature,
   RIVERS_PANE,
+  type RiverFocus,
   styleRivers,
 } from './geoLayers'
 import { createMapLegend, type MapLegend } from './MapLegend'
@@ -61,8 +61,10 @@ const markers = new Map<string, L.CircleMarker>()
 /** Expanding rings behind strongly anomalous stations; see `.marker-pulse` in main.css. */
 const pulses = new Map<string, L.CircleMarker>()
 let riversLayer: L.FeatureGroup | undefined
-/** Flow speeds the river paths were built with; other state changes only restyle them. */
-let riversFlow: string | undefined
+/** Station count the river runs were built for; other state changes only restyle them. */
+let riversStations: number | undefined
+/** Station under the pointer; its river reach is outlined until the pointer leaves. */
+let hoveredId: string | null = null
 let borderLayer: L.LayerGroup | undefined
 let setBasemapStyle: ((dark: boolean, locale: Locale) => void) | undefined
 let legendControl: MapLegend | undefined
@@ -139,8 +141,12 @@ function syncMarkers() {
     const { id, marker: position, basin } = state.station
     let marker = markers.get(id)
     if (!marker) {
-      marker = L.circleMarker([position.lat, position.lon]).bindTooltip('', { direction: 'top' })
+      marker = L.circleMarker([position.lat, position.lon], {
+        bubblingMouseEvents: false,
+      }).bindTooltip('', { direction: 'top' })
       marker.on('click', () => ui.selectStation(id))
+      marker.on('mouseover', () => setHovered(id))
+      marker.on('mouseout', () => setHovered(null))
       markers.set(id, marker)
     }
     const selected = ui.selectedId === id
@@ -157,6 +163,34 @@ function syncMarkers() {
   }
 }
 
+function riverFocus(): RiverFocus {
+  return { selected: ui.selectedId, hovered: hoveredId }
+}
+
+function restyleRivers() {
+  if (map && riversLayer) {
+    styleRivers(riversLayer, riverTints(), map.getZoom(), isDark.value, riverFocus())
+  }
+}
+
+function setHovered(id: string | null) {
+  hoveredId = id
+  restyleRivers()
+}
+
+/** A brief pop on the selected marker; the class is removed so the next selection replays it. */
+function popMarker(id: string | null) {
+  const element = id === null ? undefined : markers.get(id)?.getElement()
+  if (!element || prefersReducedMotion()) return
+  element.classList.remove('marker-pop')
+  // Reading layout restarts the animation when the same marker is selected again.
+  void element.getBoundingClientRect()
+  element.classList.add('marker-pop')
+  element.addEventListener('animationend', () => element.classList.remove('marker-pop'), {
+    once: true,
+  })
+}
+
 /** No tints until markers show, so rivers do not flash colours before data arrives. */
 function riverTints(): Map<string, string | null> {
   if (!props.showMarkers) return new Map()
@@ -166,22 +200,20 @@ function riverTints(): Map<string, string | null> {
 function syncGeoLayers() {
   if (!map) return
   const states = props.showMarkers ? props.states : []
-  const flow = `${states.length}:${flowSignature(states)}`
-  if (riversLayer && riversFlow !== flow) {
+  if (riversLayer && riversStations !== states.length) {
     riversLayer.remove()
     riversLayer = undefined
   }
   if (!riversLayer && rivers.data.value) {
-    riversFlow = flow
+    riversStations = states.length
     riversLayer = createRiversLayer(
       rivers.data.value,
       states,
       new FixedSizeSvg({ pane: RIVERS_PANE }),
-      isDark.value,
     )
     riversLayer.addTo(map)
   }
-  if (riversLayer) styleRivers(riversLayer, riverTints(), map.getZoom(), isDark.value)
+  restyleRivers()
   if (!borderLayer && border.data.value) {
     borderLayer = createBorderLayer(
       border.data.value,
@@ -234,10 +266,10 @@ onMounted(() => {
   setBasemapStyle = addBasemap(map, isDark.value, locale.value)
   createGeoPanes(map)
   resetView()
-  map.on('zoomend', () => {
-    if (map && riversLayer) {
-      styleRivers(riversLayer, riverTints(), map.getZoom(), isDark.value)
-    }
+  map.on('zoomend', restyleRivers)
+  map.on('click', () => ui.selectStation(null))
+  container.value.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && ui.selectedId !== null) ui.selectStation(null)
   })
   legendControl = createMapLegend(props.legend)
   legendControl.control.addTo(map)
@@ -273,7 +305,14 @@ watch(
   () => [props.states, props.marks, props.showMarkers, ui.basin, ui.selectedId, locale.value],
   syncMarkers,
 )
-watch(() => ui.selectedId, focusSelection)
+watch(
+  () => ui.selectedId,
+  (id) => {
+    focusSelection(id)
+    restyleRivers()
+    popMarker(id)
+  },
+)
 watch(
   () => [rivers.data.value, border.data.value, props.states, props.marks, props.showMarkers],
   syncGeoLayers,
