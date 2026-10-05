@@ -22,7 +22,7 @@ import {
   type RiverFocus,
   styleRivers,
 } from './geoLayers'
-import { createMapLegend, type MapLegend } from './MapLegend'
+import MapLegend from './MapLegend.vue'
 import { UNCLASSIFIED_FILL, type LegendContent, type MapMark } from './mapMarks'
 
 const props = defineProps<{
@@ -67,7 +67,6 @@ let riversStations: number | undefined
 let hoveredId: string | null = null
 let borderLayer: L.LayerGroup | undefined
 let setBasemapStyle: ((dark: boolean, locale: Locale) => void) | undefined
-let legendControl: MapLegend | undefined
 
 /**
  * Leaflet's SVG renderer only CSS-scales its layer on each `zoom` event and redraws on
@@ -271,8 +270,6 @@ onMounted(() => {
   container.value.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && ui.selectedId !== null) ui.selectStation(null)
   })
-  legendControl = createMapLegend(props.legend)
-  legendControl.control.addTo(map)
 
   // A container measured while hidden or mid-layout gives a wrong initial view; reset it on resize.
   const markTouched = () => (viewTouched = true)
@@ -298,7 +295,6 @@ onBeforeUnmount(() => {
   riversLayer = undefined
   borderLayer = undefined
   setBasemapStyle = undefined
-  legendControl = undefined
 })
 
 watch(
@@ -319,12 +315,11 @@ watch(
 )
 watch(isDark, applyTheme)
 watch(locale, (value) => setBasemapStyle?.(isDark.value, value))
-watch(
-  () => props.legend,
-  (content) => legendControl?.setContent(content),
-)
 </script>
 
 <template>
-  <div ref="container" class="size-full" role="region" :aria-label="t.map.ariaLabel"></div>
+  <div class="relative size-full">
+    <div ref="container" class="size-full" role="region" :aria-label="t.map.ariaLabel"></div>
+    <MapLegend :content="legend" class="absolute bottom-2.5 left-2.5 z-[1000]" />
+  </div>
 </template>
