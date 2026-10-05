@@ -1,16 +1,13 @@
-import L from 'leaflet'
+import type { ExpressionSpecification, Map as MapLibreMap } from 'maplibre-gl'
 
 import type { BorderFile, RiversFile } from '../../config/geo'
 import type { Position } from '../../lib/geometry'
 import { assignRiverReach, type SegmentReach } from '../../lib/riverReach'
 import type { StationState } from '../../types'
 
-/**
- * Between the basemap (tilePane, 200) and the station markers (overlayPane, 400). The border
- * pane sits above the rivers so its veil also dims rivers outside Ukraine.
- */
-export const RIVERS_PANE = 'rivers'
-export const BORDER_PANE = 'border'
+/** Source ids; river runs promote `tintId` to the feature id, so state is set per station. */
+export const RIVERS_SOURCE = 'rivers'
+const BORDER_SOURCE = 'border'
 
 /** The veil over everything outside Ukraine makes the country read as the focus. */
 const GEO_COLORS = {
@@ -30,23 +27,13 @@ const DIMMED = 0.3
 const VEIL_OPACITY = 0.45
 
 const geoColors = (dark: boolean) => (dark ? GEO_COLORS.dark : GEO_COLORS.light)
-const WORLD_RING: L.LatLngTuple[] = [
-  [-85, -180],
-  [-85, 180],
-  [85, 180],
-  [85, -180],
+const WORLD_RING: Position[] = [
+  [-180, -85],
+  [180, -85],
+  [180, 85],
+  [-180, 85],
+  [-180, -85],
 ]
-
-export function createGeoPanes(map: L.Map): void {
-  map.createPane(RIVERS_PANE).style.zIndex = '340'
-  map.createPane(BORDER_PANE).style.zIndex = '350'
-}
-
-/** Stroke widths grow with zoom so rivers stay visible over the city-level basemap. */
-function riverWeight(major: boolean, zoom: number): number {
-  const base = major ? 1.6 : 0.9
-  return base + Math.max(0, zoom - 6) * (major ? 0.6 : 0.35)
-}
 
 /** How far downstream and upstream a station tints its river, and how far it may sit off it. */
 const REACH_KM = 120
@@ -85,22 +72,12 @@ function riverReach(data: RiversFile, states: readonly StationState[], maxKm: nu
   return reach
 }
 
-function mix(from: string, to: string, t: number): string {
-  const channel = (hex: string, i: number) => parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16)
-  const parts = [0, 1, 2].map((i) =>
-    Math.round(channel(from, i) + (channel(to, i) - channel(from, i)) * t)
-      .toString(16)
-      .padStart(2, '0'),
-  )
-  return `#${parts.join('')}`
-}
-
 /**
  * Splits the rivers into runs that share a tinting station and a fade step. The geometry
  * depends only on station positions, so a date change in the timelapse only recolours the
- * runs (`styleRivers`) instead of rebuilding the paths.
+ * runs (`setRiverTints`) instead of rebuilding the paths.
  */
-function riverRuns(data: RiversFile, states: readonly StationState[]): RiversFile {
+export function riverRuns(data: RiversFile, states: readonly StationState[]): RiversFile {
   const reach = riverReach(data, states, REACH_KM)
   const propsAt = (r: SegmentReach | null) =>
     r
@@ -137,102 +114,173 @@ function riverRuns(data: RiversFile, states: readonly StationState[]): RiversFil
   return { type: 'FeatureCollection', features }
 }
 
-const CASING_CLASS = 'river-casing'
+const TINTED: ExpressionSpecification = ['to-boolean', ['feature-state', 'tint']]
+const FOCUSED: ExpressionSpecification = ['boolean', ['feature-state', 'focused'], false]
 
 /**
- * The river lines over a casing layer that outlines only the focused reach. Colours and
- * weights come from `styleRivers`.
+ * Stroke widths grow with zoom so rivers stay visible over the city-level basemap. Tinted
+ * reaches are a little thicker so the colour reads at country zoom; the focused reach more so.
  */
-export function createRiversLayer(
-  data: RiversFile,
-  states: readonly StationState[],
-  renderer: L.Renderer,
-): L.FeatureGroup {
-  const runs = states.length > 0 ? riverRuns(data, states) : data
-  // L.geoJSON passes its own options to every path it creates, renderer included.
-  const options = (className: string): L.GeoJSONOptions & L.PathOptions => ({
-    pane: RIVERS_PANE,
-    renderer,
-    interactive: false,
-    className,
-    style: () => ({ lineCap: 'round', lineJoin: 'round' }),
-  })
-  return L.featureGroup([L.geoJSON(runs, options(CASING_CLASS)), L.geoJSON(runs, options(''))])
-}
-
-/** Stations whose river reach stands out: the selection dims the rest, a hover only outlines. */
-export interface RiverFocus {
-  selected: string | null
-  hovered: string | null
+function riverWidth(extra: number): ExpressionSpecification {
+  const major = ['==', ['get', 'major'], true] as ExpressionSpecification
+  const at = (zoom: number): ExpressionSpecification => [
+    '+',
+    ['case', major, 1.6 + Math.max(0, zoom - 5) * 0.6, 0.9 + Math.max(0, zoom - 5) * 0.35],
+    ['case', FOCUSED, 2.5 + extra, TINTED, 1.2 + extra, extra],
+  ]
+  return ['interpolate', ['linear'], ['zoom'], 5, at(5), 14, at(14)]
 }
 
 /**
- * Rivers near a station take its tint (`tints`, by station id), fading back to the plain river
- * colour with network distance. A `null` tint keeps the plain colour, so only notable stations
- * stand out. Tinted reaches are drawn a little thicker so the colour reads at country zoom.
- * The focused station's reach is drawn wider over a casing; a selection also dims every other
- * river.
+ * Rivers near a station take its tint, fading back to the plain river colour with network
+ * distance. A `null` tint keeps the plain colour, so only notable stations stand out.
  */
-export function styleRivers(
-  layer: L.FeatureGroup,
-  tints: ReadonlyMap<string, string | null>,
-  zoom: number,
-  dark: boolean,
-  focus: RiverFocus,
-): void {
+function riverColor(dark: boolean): ExpressionSpecification {
   const base = geoColors(dark).river
-  const casing = dark ? CASING_COLORS.dark : CASING_COLORS.light
-  const focusId = focus.selected ?? focus.hovered
-  layer.eachLayer((child) => {
-    const casingLayer = ((child as L.GeoJSON).options as L.PathOptions).className === CASING_CLASS
-    ;(child as L.GeoJSON).setStyle((feature) => {
-      const props = feature?.properties ?? { major: false }
-      const weight = riverWeight(props.major === true, zoom)
-      const focused = focusId !== null && props.tintId === focusId
-      const fade = focus.selected !== null && !focused ? DIMMED : 1
-      if (casingLayer) {
-        return focused
-          ? { color: casing, opacity: 0.9, weight: weight + 6 }
-          : { opacity: 0, weight }
-      }
-      const color = props.tintId === undefined ? null : (tints.get(props.tintId) ?? null)
-      if (focused) {
-        const step = color ? (props.tintStep ?? 0) / FADE_STEPS : 0
-        return { color: color ? mix(color, base, step) : base, opacity: 1, weight: weight + 2.5 }
-      }
-      if (!color) return { color: base, opacity: (props.major ? 0.85 : 0.6) * fade, weight }
-      return {
-        color: mix(color, base, (props.tintStep ?? 0) / FADE_STEPS),
-        opacity: 0.95 * fade,
-        weight: weight + 1.2,
-      }
-    })
-  })
+  return [
+    'case',
+    TINTED,
+    [
+      'interpolate',
+      ['linear'],
+      ['coalesce', ['get', 'tintStep'], 0],
+      0,
+      ['to-color', ['feature-state', 'tint']],
+      FADE_STEPS,
+      base,
+    ],
+    base,
+  ]
 }
 
-function outerRings(border: BorderFile): L.LatLngTuple[][] {
-  return border.geometry.coordinates.map((polygon) =>
-    polygon[0].map(([lon, lat]): L.LatLngTuple => [lat, lon]),
+/** A selection dims every river outside the selected station's reach. */
+export function riverOpacity(dimmed: boolean): ExpressionSpecification {
+  const fade = dimmed ? DIMMED : 1
+  return [
+    'case',
+    FOCUSED,
+    1,
+    TINTED,
+    0.95 * fade,
+    ['==', ['get', 'major'], true],
+    0.85 * fade,
+    0.6 * fade,
+  ]
+}
+
+function outerRings(border: BorderFile): Position[][] {
+  return border.geometry.coordinates.map((polygon) => polygon[0])
+}
+
+/**
+ * River runs over a casing that outlines only the focused reach. Drawn under `beforeId`: the
+ * border veil, or the markers while the border has not loaded.
+ */
+export function addRiverLayers(
+  map: MapLibreMap,
+  rivers: RiversFile,
+  dark: boolean,
+  dimmed: boolean,
+  beforeId: string,
+): void {
+  map.addSource(RIVERS_SOURCE, { type: 'geojson', data: rivers, promoteId: 'tintId' })
+  const layout = { 'line-cap': 'round', 'line-join': 'round' } as const
+  map.addLayer(
+    {
+      id: 'river-casing',
+      type: 'line',
+      source: RIVERS_SOURCE,
+      layout,
+      paint: {
+        'line-color': dark ? CASING_COLORS.dark : CASING_COLORS.light,
+        'line-opacity': ['case', FOCUSED, 0.9, 0],
+        'line-width': riverWidth(3.5),
+      },
+    },
+    beforeId,
+  )
+  map.addLayer(
+    {
+      id: 'rivers',
+      type: 'line',
+      source: RIVERS_SOURCE,
+      layout,
+      paint: {
+        'line-color': riverColor(dark),
+        'line-opacity': riverOpacity(dimmed),
+        'line-width': riverWidth(0),
+      },
+    },
+    beforeId,
   )
 }
 
-/** Veil outside the country, a soft yellow halo and a blue-grey outline along the border. */
-export function createBorderLayer(
+/** First layer of the border group; rivers go under it so the veil also dims rivers abroad. */
+export const BORDER_BOTTOM_LAYER = 'border-veil'
+
+/**
+ * Veil outside the country, a soft yellow halo and a blue-grey outline along the border,
+ * drawn under `beforeId` (the markers).
+ */
+export function addBorderLayers(
+  map: MapLibreMap,
   border: BorderFile,
-  renderer: L.Renderer,
   dark: boolean,
-): L.LayerGroup {
+  beforeId: string,
+): void {
   const colors = geoColors(dark)
   const rings = outerRings(border)
-  const common = { pane: BORDER_PANE, interactive: false, renderer, lineJoin: 'round' as const }
-  return L.layerGroup([
-    L.polygon([WORLD_RING, ...rings], {
-      ...common,
-      stroke: false,
-      fillColor: colors.veil,
-      fillOpacity: VEIL_OPACITY,
-    }),
-    L.polyline(rings, { ...common, color: colors.halo, weight: 5, opacity: colors.haloOpacity }),
-    L.polyline(rings, { ...common, color: colors.border, weight: 1.25, opacity: 0.7 }),
-  ])
+  map.addSource(BORDER_SOURCE, {
+    type: 'geojson',
+    data: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { veil: true },
+          geometry: { type: 'Polygon', coordinates: [WORLD_RING, ...rings] },
+        },
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'MultiLineString', coordinates: rings },
+        },
+      ],
+    },
+  })
+  map.addLayer(
+    {
+      id: BORDER_BOTTOM_LAYER,
+      type: 'fill',
+      source: BORDER_SOURCE,
+      filter: ['has', 'veil'],
+      paint: { 'fill-color': colors.veil, 'fill-opacity': VEIL_OPACITY },
+    },
+    beforeId,
+  )
+  const line = (id: string, color: string, width: number, opacity: number) =>
+    map.addLayer(
+      {
+        id,
+        type: 'line',
+        source: BORDER_SOURCE,
+        filter: ['!', ['has', 'veil']],
+        layout: { 'line-join': 'round' },
+        paint: { 'line-color': color, 'line-width': width, 'line-opacity': opacity },
+      },
+      beforeId,
+    )
+  line('border-halo', colors.halo, 5, colors.haloOpacity)
+  line('border-line', colors.border, 1.25, 0.7)
+}
+
+/** Tint per station id; `null` keeps the plain river colour. Only feature state changes. */
+export function setRiverTints(map: MapLibreMap, tints: ReadonlyMap<string, string | null>): void {
+  for (const [id, tint] of tints) map.setFeatureState({ source: RIVERS_SOURCE, id }, { tint })
+}
+
+/** Widens and outlines one station's reach; `null` clears the focus. */
+export function setRiverFocus(map: MapLibreMap, from: string | null, to: string | null): void {
+  if (from !== null) map.setFeatureState({ source: RIVERS_SOURCE, id: from }, { focused: false })
+  if (to !== null) map.setFeatureState({ source: RIVERS_SOURCE, id: to }, { focused: true })
 }

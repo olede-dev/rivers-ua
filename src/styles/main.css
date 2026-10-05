@@ -16,57 +16,61 @@
   }
 }
 
-/* Leaflet's own controls and tooltips are styled for a light page. */
-.dark .leaflet-container {
+/* MapLibre's controls and the station tooltip are styled for a light page. */
+.dark .maplibregl-map {
   background: var(--color-slate-900);
 }
 
-.dark .leaflet-bar a,
-.dark .leaflet-bar a:hover {
-  border-bottom-color: var(--color-slate-700);
-  background-color: var(--color-slate-800);
-  color: var(--color-slate-100);
+.dark .maplibregl-ctrl-group {
+  background: var(--color-slate-800);
 }
 
-.dark .leaflet-bar a:hover {
-  background-color: var(--color-slate-700);
+.dark .maplibregl-ctrl-group button + button {
+  border-top-color: var(--color-slate-700);
 }
 
-.dark .leaflet-bar a.leaflet-disabled {
-  background-color: var(--color-slate-900);
-  color: var(--color-slate-600);
+.dark .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
 }
 
-.dark .leaflet-control-attribution {
+.dark .maplibregl-ctrl-attrib,
+.dark .maplibregl-ctrl-attrib.maplibregl-compact {
   background: rgb(15 23 42 / 0.8);
   color: var(--color-slate-300);
 }
 
-.dark .leaflet-control-attribution a {
+.dark .maplibregl-ctrl-attrib a {
   color: var(--color-sky-300);
-}
-
-.dark .leaflet-tooltip {
-  border-color: var(--color-slate-700);
-  background: var(--color-slate-800);
-  color: var(--color-slate-100);
-}
-
-.dark .leaflet-tooltip-top::before {
-  border-top-color: var(--color-slate-800);
 }
 
 /* On narrow maps the attribution wraps across the full width and hides the bottom-left legend. */
 @media (width < 640px) {
-  .leaflet-control-attribution {
+  .maplibregl-ctrl-attrib.maplibregl-compact-show {
     max-width: 50%;
   }
 }
 
-/* Clicking a marker draws the browser's focus box around the SVG path; markers are not
-   tab stops (the station list is the keyboard path), so the box only adds noise. */
-.leaflet-container path.leaflet-interactive:focus {
-  outline: none;
+.station-tooltip {
+  pointer-events: none;
+}
+
+.station-tooltip .maplibregl-popup-content {
+  padding: 4px 8px;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+
+.dark .station-tooltip .maplibregl-popup-content {
+  background: var(--color-slate-800);
+  color: var(--color-slate-100);
+}
+
+.dark .station-tooltip.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: var(--color-slate-800);
+}
+
+.dark .station-tooltip.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: var(--color-slate-800);
 }
 
 /* The stations drawer slides in from the right edge on narrow screens. */
@@ -83,70 +87,5 @@
 @media (prefers-reduced-motion: reduce) {
   .drawer[open] {
     animation: none;
-  }
-}
-
-/* Shaded relief darkens the light basemap and lightens the dark one. */
-.leaflet-relief-pane {
-  mix-blend-mode: multiply;
-}
-
-.dark .leaflet-relief-pane {
-  mix-blend-mode: screen;
-}
-
-/* Strongly anomalous stations: a ring that grows and fades behind the marker. */
-.marker-pulse {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: marker-pulse 2.2s ease-out infinite;
-}
-
-@keyframes marker-pulse {
-  from {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  to {
-    transform: scale(2.8);
-    opacity: 0;
-  }
-}
-
-/* Focusing a station's river fades the other rivers and widens its own reach. */
-.leaflet-rivers-pane path {
-  transition:
-    stroke-opacity 0.2s ease,
-    stroke-width 0.2s ease;
-}
-
-/* A one-off pop when a station is selected. */
-.marker-pop {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: marker-pop 0.6s ease-out;
-}
-
-@keyframes marker-pop {
-  40% {
-    transform: scale(1.6);
-  }
-  to {
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .marker-pulse,
-  .marker-pop {
-    animation: none;
-  }
-
-  .leaflet-rivers-pane path {
-    transition: none;
-  }
-
-  .marker-pulse {
-    opacity: 0;
   }
 }

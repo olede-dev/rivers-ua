@@ -10,8 +10,6 @@ export interface RiverProperties {
   /** Station whose water state tints this run, and the fade step away from it. */
   tintId?: string
   tintStep?: number
-  /** Flow-animation speed from the nearest station. Set only on the copy the map draws. */
-  flow?: 'slow' | 'medium' | 'fast'
 }
 
 export type RiversFile = FeatureCollection<LineString | MultiLineString, RiverProperties>

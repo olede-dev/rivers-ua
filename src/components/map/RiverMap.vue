@@ -1,29 +1,44 @@
 <script setup lang="ts">
-import 'leaflet/dist/leaflet.css'
-
-import L from 'leaflet'
+import * as maplibregl from 'maplibre-gl'
+import {
+  type GeoJSONSource,
+  type LngLatBoundsLike,
+  type LngLatLike,
+  type MapLayerMouseEvent,
+  type StyleSpecification,
+} from 'maplibre-gl'
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue'
 
 import { useLocale } from '../../composables/useLocale'
 import { useRivers, useUkraineBorder } from '../../composables/useMapGeo'
 import { useTheme } from '../../composables/useTheme'
-import { NO_DATA_STROKE } from '../../config/anomalyClasses'
-import { stationName, type Locale } from '../../i18n'
+import { stationName } from '../../i18n'
 import { formatDischarge } from '../../lib/format'
 import { useUiStore } from '../../stores/ui'
 import type { StationState } from '../../types'
-import { addBasemap } from './basemap'
+import { basemapStyle } from './basemap'
 import {
-  BORDER_PANE,
-  createBorderLayer,
-  createGeoPanes,
-  createRiversLayer,
-  RIVERS_PANE,
-  type RiverFocus,
-  styleRivers,
+  addBorderLayers,
+  addRiverLayers,
+  BORDER_BOTTOM_LAYER,
+  RIVERS_SOURCE,
+  riverOpacity,
+  riverRuns,
+  setRiverFocus,
+  setRiverTints,
 } from './geoLayers'
 import MapLegend from './MapLegend.vue'
 import { UNCLASSIFIED_FILL, type LegendContent, type MapMark } from './mapMarks'
+import {
+  addStationLayers,
+  createStationAnimator,
+  setStationData,
+  setStationFilters,
+  setStationMarks,
+  STATION_LAYERS,
+  stationFeatures,
+  STATIONS_BOTTOM_LAYER,
+} from './stationLayers'
 
 const props = defineProps<{
   states: readonly StationState[]
@@ -34,16 +49,13 @@ const props = defineProps<{
   showMarkers: boolean
 }>()
 
-const UKRAINE_BOUNDS: L.LatLngBoundsExpression = [
-  [44.0, 22.0],
-  [52.5, 40.3],
+const UKRAINE_BOUNDS: LngLatBoundsLike = [
+  [22.0, 44.0],
+  [40.3, 52.5],
 ]
-const SELECTED_ZOOM = 8
-/** Marker outlines: a ring in the basemap's tone, and a contrasting one for the selection. */
-const MARKER_STROKES = {
-  light: { ring: '#ffffff', selected: '#0f172a' },
-  dark: { ring: '#0f172a', selected: '#ffffff' },
-}
+const SELECTED_ZOOM = 7
+/** Shown until the basemap style arrives, so geo layers can be added straight away. */
+const EMPTY_STYLE: StyleSpecification = { version: 8, sources: {}, layers: [] }
 
 const ui = useUiStore()
 const rivers = useRivers()
@@ -52,55 +64,31 @@ const { isDark } = useTheme()
 const { locale, t } = useLocale()
 const container = useTemplateRef<HTMLDivElement>('container')
 
-// Leaflet objects stay outside Vue reactivity: proxies break them.
-let map: L.Map | undefined
+// MapLibre objects stay outside Vue reactivity: proxies break them.
+let map: maplibregl.Map | undefined
 let resizeObserver: ResizeObserver | undefined
+let animator: ReturnType<typeof createStationAnimator> | undefined
 /** Set once the user pans or zooms; until then a resize restores the initial view. */
 let viewTouched = false
-const markers = new Map<string, L.CircleMarker>()
-/** Expanding rings behind strongly anomalous stations; see `.marker-pulse` in main.css. */
-const pulses = new Map<string, L.CircleMarker>()
-let riversLayer: L.FeatureGroup | undefined
-/** Station count the river runs were built for; other state changes only restyle them. */
+/** Station count the river runs were built for; other state changes only update feature state. */
 let riversStations: number | undefined
 /** Station under the pointer; its river reach is outlined until the pointer leaves. */
 let hoveredId: string | null = null
-let borderLayer: L.LayerGroup | undefined
-let setBasemapStyle: ((dark: boolean, locale: Locale) => void) | undefined
-
-/**
- * Leaflet's SVG renderer only CSS-scales its layer on each `zoom` event and redraws on
- * `moveend`, so during `flyTo` circle markers balloon by 2^Δzoom. Redraw every frame instead;
- * the CSS zoom animation (`_animatingZoom`) keeps the stock behaviour.
- */
-type SvgInternals = L.SVG & {
-  _map: L.Map & { _animatingZoom?: boolean }
-  _onZoom(): void
-  _reset(): void
-}
-const FixedSizeSvg = L.SVG.extend({
-  _onZoom(this: SvgInternals) {
-    if (this._map._animatingZoom) (L.SVG.prototype as SvgInternals)._onZoom.call(this)
-    else this._reset()
-  },
-}) as unknown as new (options?: L.RendererOptions) => L.SVG
-
-function markerRadius(meanAnnual: number | null): number {
-  if (meanAnnual === null || meanAnnual <= 0) return 8
-  return Math.min(16, Math.max(6, 5 + 2.5 * Math.log10(meanAnnual)))
-}
+/** Station whose river reach is focused in the current style. */
+let focusedId: string | null = null
+/** Latest basemap request; an older style that arrives late is dropped. */
+let styleRequest = 0
+/** Between `style.load` and the next `setStyle`, layers can be added. */
+let styleReady = false
+const popup = new maplibregl.Popup({
+  closeButton: false,
+  closeOnClick: false,
+  offset: 10,
+  className: 'station-tooltip',
+})
 
 function markOf(id: string): MapMark {
   return props.marks.get(id) ?? { fill: UNCLASSIFIED_FILL, tint: null, pulse: false, detail: null }
-}
-
-function markerStyle(mark: MapMark, selected: boolean): L.CircleMarkerOptions {
-  const color = mark.fill
-  const strokes = isDark.value ? MARKER_STROKES.dark : MARKER_STROKES.light
-  const base = color
-    ? { fillColor: color, fillOpacity: 0.95, color: strokes.ring, weight: 1.5 }
-    : { fillOpacity: 0, color: NO_DATA_STROKE, weight: 2 }
-  return selected ? { ...base, color: strokes.selected, weight: 3 } : base
 }
 
 function tooltipText({ station, current }: StationState, mark: MapMark): string {
@@ -113,81 +101,39 @@ function tooltipText({ station, current }: StationState, mark: MapMark): string 
   return parts.join(' · ')
 }
 
-function syncPulse(state: StationState, mark: MapMark, visible: boolean) {
-  const { id, marker: position } = state.station
-  const color = mark.fill
-  let pulse = pulses.get(id)
-  if (!mark.pulse || color === null || !visible) {
-    pulse?.remove()
+/** Our layers exist only after `style.load`; every style switch removes them. */
+function layersReady(): boolean {
+  return map?.getLayer('stations') !== undefined
+}
+
+function riversReady(): boolean {
+  return map?.getLayer('rivers') !== undefined
+}
+
+function visibleStates(): readonly StationState[] {
+  return props.states.filter((s) => ui.basin === 'all' || s.station.basin === ui.basin)
+}
+
+function syncTooltip() {
+  const state = props.states.find((s) => s.station.id === hoveredId)
+  if (!map || !state) {
+    popup.remove()
     return
   }
-  if (!pulse) {
-    pulse = L.circleMarker([position.lat, position.lon], {
-      className: 'marker-pulse',
-      interactive: false,
-      fill: false,
-    })
-    pulses.set(id, pulse)
-  }
-  pulse.setStyle({ color, weight: 2.5, opacity: 0.9 })
-  pulse.setRadius(markerRadius(state.meanAnnual))
-  if (map && !map.hasLayer(pulse)) pulse.addTo(map).bringToBack()
+  popup
+    .setLngLat([state.station.marker.lon, state.station.marker.lat])
+    .setText(tooltipText(state, markOf(state.station.id)))
+  if (!popup.isOpen()) popup.addTo(map)
 }
 
 function syncMarkers() {
-  if (!map || !props.showMarkers) return
-  for (const state of props.states) {
-    const { id, marker: position, basin } = state.station
-    let marker = markers.get(id)
-    if (!marker) {
-      marker = L.circleMarker([position.lat, position.lon], {
-        bubblingMouseEvents: false,
-      }).bindTooltip('', { direction: 'top' })
-      marker.on('click', () => ui.selectStation(id))
-      marker.on('mouseover', () => setHovered(id))
-      marker.on('mouseout', () => setHovered(null))
-      markers.set(id, marker)
-    }
-    const selected = ui.selectedId === id
-    const mark = markOf(id)
-    marker.setStyle(markerStyle(mark, selected))
-    marker.setRadius(markerRadius(state.meanAnnual))
-    marker.setTooltipContent(tooltipText(state, mark))
-
-    const visible = ui.basin === 'all' || basin === ui.basin
-    if (visible && !map.hasLayer(marker)) marker.addTo(map)
-    if (!visible && map.hasLayer(marker)) marker.remove()
-    if (visible && selected) marker.bringToFront()
-    syncPulse(state, mark, visible)
-  }
-}
-
-function riverFocus(): RiverFocus {
-  return { selected: ui.selectedId, hovered: hoveredId }
-}
-
-function restyleRivers() {
-  if (map && riversLayer) {
-    styleRivers(riversLayer, riverTints(), map.getZoom(), isDark.value, riverFocus())
-  }
-}
-
-function setHovered(id: string | null) {
-  hoveredId = id
-  restyleRivers()
-}
-
-/** A brief pop on the selected marker; the class is removed so the next selection replays it. */
-function popMarker(id: string | null) {
-  const element = id === null ? undefined : markers.get(id)?.getElement()
-  if (!element || prefersReducedMotion()) return
-  element.classList.remove('marker-pop')
-  // Reading layout restarts the animation when the same marker is selected again.
-  void element.getBoundingClientRect()
-  element.classList.add('marker-pop')
-  element.addEventListener('animationend', () => element.classList.remove('marker-pop'), {
-    once: true,
-  })
+  if (!map || !layersReady()) return
+  const states = props.showMarkers ? props.states : []
+  setStationData(map, stationFeatures(states))
+  setStationMarks(map, props.showMarkers ? props.marks : new Map())
+  setStationFilters(map, ui.basin, ui.selectedId)
+  animator?.setPulsing(props.showMarkers && visibleStates().some((s) => markOf(s.station.id).pulse))
+  syncTooltip()
 }
 
 /** No tints until markers show, so rivers do not flash colours before data arrives. */
@@ -196,77 +142,130 @@ function riverTints(): Map<string, string | null> {
   return new Map([...props.marks].map(([id, mark]) => [id, mark.tint]))
 }
 
-function syncGeoLayers() {
-  if (!map) return
+/** A selection outlines its reach and dims the rest; a hover only outlines. */
+function syncRiverFocus() {
+  if (!map || !riversReady()) return
+  const next = ui.selectedId ?? hoveredId
+  if (next !== focusedId) setRiverFocus(map, focusedId, next)
+  focusedId = next
+  map.setPaintProperty('rivers', 'line-opacity', riverOpacity(ui.selectedId !== null))
+}
+
+function syncRivers() {
+  if (!map || !riversReady() || !rivers.data.value) return
   const states = props.showMarkers ? props.states : []
-  if (riversLayer && riversStations !== states.length) {
-    riversLayer.remove()
-    riversLayer = undefined
-  }
-  if (!riversLayer && rivers.data.value) {
+  if (riversStations !== states.length) {
     riversStations = states.length
-    riversLayer = createRiversLayer(
-      rivers.data.value,
-      states,
-      new FixedSizeSvg({ pane: RIVERS_PANE }),
-    )
-    riversLayer.addTo(map)
+    const runs = states.length > 0 ? riverRuns(rivers.data.value, states) : rivers.data.value
+    map.getSource<GeoJSONSource>(RIVERS_SOURCE)?.setData(runs)
   }
-  restyleRivers()
-  if (!borderLayer && border.data.value) {
-    borderLayer = createBorderLayer(
-      border.data.value,
-      new FixedSizeSvg({ pane: BORDER_PANE }),
-      isDark.value,
-    )
-    borderLayer.addTo(map)
+  setRiverTints(map, riverTints())
+}
+
+/**
+ * Adds whatever of markers, border and rivers the style still lacks, in drawing order: the
+ * veil lies over the rivers and under the markers. Feature state starts empty with each new
+ * layer, so it is set again.
+ */
+function addOwnLayers() {
+  if (!map || !styleReady) return
+  if (!layersReady()) {
+    addStationLayers(map, stationFeatures([]), isDark.value)
+    syncMarkers()
+  }
+  if (border.data.value && !map.getLayer(BORDER_BOTTOM_LAYER)) {
+    addBorderLayers(map, border.data.value, isDark.value, STATIONS_BOTTOM_LAYER)
+  }
+  if (rivers.data.value && !riversReady()) {
+    const beforeId = map.getLayer(BORDER_BOTTOM_LAYER) ? BORDER_BOTTOM_LAYER : STATIONS_BOTTOM_LAYER
+    addRiverLayers(map, rivers.data.value, isDark.value, ui.selectedId !== null, beforeId)
+    riversStations = undefined
+    focusedId = null
+    syncRivers()
+    syncRiverFocus()
   }
 }
 
-/** Basemap style and geo layer colours follow the theme; markers restyle in `syncMarkers`. */
-function applyTheme(dark: boolean) {
-  setBasemapStyle?.(dark, locale.value)
-  riversLayer?.remove()
-  borderLayer?.remove()
-  riversLayer = undefined
-  borderLayer = undefined
-  syncGeoLayers()
-  syncMarkers()
+/** Basemap for the theme and label language; `style.load` then brings our layers back. */
+function applyStyle() {
+  const own = ++styleRequest
+  void basemapStyle(isDark.value, locale.value).then((style) => {
+    if (!map || own !== styleRequest) return
+    styleReady = false
+    map.setStyle(style, { diff: false })
+  })
 }
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-function selectedPosition(id: string | null): L.LatLngTuple | null {
+function selectedPosition(id: string | null): LngLatLike | null {
   const station = props.states.find((s) => s.station.id === id)?.station
-  return station ? [station.marker.lat, station.marker.lon] : null
+  return station ? [station.marker.lon, station.marker.lat] : null
 }
 
 function focusSelection(id: string | null) {
   if (!map) return
   const animate = !prefersReducedMotion()
   const position = selectedPosition(id)
-  if (position) map.flyTo(position, SELECTED_ZOOM, { animate })
-  else map.flyToBounds(UKRAINE_BOUNDS, { animate })
+  if (position) map.flyTo({ center: position, zoom: SELECTED_ZOOM, animate })
+  else map.fitBounds(UKRAINE_BOUNDS, { animate })
 }
 
 /** Instant view for the current selection; a station may already be selected from the URL. */
 function resetView() {
   if (!map) return
   const position = selectedPosition(ui.selectedId)
-  if (position) map.setView(position, SELECTED_ZOOM, { animate: false })
+  if (position) map.jumpTo({ center: position, zoom: SELECTED_ZOOM })
   else map.fitBounds(UKRAINE_BOUNDS, { animate: false })
+}
+
+function stationAt(event: MapLayerMouseEvent): string | null {
+  const id = event.features?.[0]?.properties.id
+  return typeof id === 'string' ? id : null
+}
+
+function setHovered(id: string | null) {
+  if (!map || hoveredId === id) return
+  hoveredId = id
+  map.getCanvas().style.cursor = id === null ? '' : 'pointer'
+  syncRiverFocus()
+  syncTooltip()
 }
 
 onMounted(() => {
   if (!container.value) return
-  map = L.map(container.value, { minZoom: 4, zoomSnap: 0.25, renderer: new FixedSizeSvg() })
-  setBasemapStyle = addBasemap(map, isDark.value, locale.value)
-  createGeoPanes(map)
+  map = new maplibregl.Map({
+    container: container.value,
+    style: EMPTY_STYLE,
+    bounds: UKRAINE_BOUNDS,
+    minZoom: 3,
+    renderWorldCopies: false,
+    dragRotate: false,
+    pitchWithRotate: false,
+    touchPitch: false,
+    attributionControl: { compact: true },
+  })
+  map.touchZoomRotate.disableRotation()
+  map.keyboard.disableRotation()
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left')
+  animator = createStationAnimator(map, prefersReducedMotion)
   resetView()
-  map.on('zoomend', restyleRivers)
-  map.on('click', () => ui.selectStation(null))
+
+  map.on('style.load', () => {
+    styleReady = true
+    addOwnLayers()
+  })
+  for (const layer of STATION_LAYERS) {
+    map.on('mousemove', layer, (event: MapLayerMouseEvent) => setHovered(stationAt(event)))
+    map.on('mouseleave', layer, () => setHovered(null))
+  }
+  map.on('click', (event: maplibregl.MapMouseEvent) => {
+    const hit = map?.queryRenderedFeatures(event.point, { layers: STATION_LAYERS })[0]
+    const id = hit?.properties.id
+    ui.selectStation(typeof id === 'string' ? id : null)
+  })
   container.value.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && ui.selectedId !== null) ui.selectStation(null)
   })
@@ -278,23 +277,20 @@ onMounted(() => {
   }
   resizeObserver = new ResizeObserver(() => {
     if (!map) return
-    map.invalidateSize()
+    map.resize()
     if (!viewTouched) resetView()
   })
   resizeObserver.observe(container.value)
-  syncMarkers()
-  syncGeoLayers()
+  applyStyle()
 })
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
+  animator?.stop()
+  popup.remove()
   map?.remove()
   map = undefined
-  markers.clear()
-  pulses.clear()
-  riversLayer = undefined
-  borderLayer = undefined
-  setBasemapStyle = undefined
+  animator = undefined
 })
 
 watch(
@@ -305,16 +301,17 @@ watch(
   () => ui.selectedId,
   (id) => {
     focusSelection(id)
-    restyleRivers()
-    popMarker(id)
+    syncRiverFocus()
+    if (id !== null) animator?.pop()
   },
 )
 watch(
-  () => [rivers.data.value, border.data.value, props.states, props.marks, props.showMarkers],
-  syncGeoLayers,
+  () => [props.states, props.marks, props.showMarkers],
+  () => syncRivers(),
 )
-watch(isDark, applyTheme)
-watch(locale, (value) => setBasemapStyle?.(isDark.value, value))
+// Geo data arriving after the style still needs its layers.
+watch(() => [rivers.data.value, border.data.value], addOwnLayers)
+watch([isDark, locale], applyStyle)
 </script>
 
 <template>
