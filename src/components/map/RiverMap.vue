@@ -16,7 +16,7 @@ import { stationName } from '../../i18n'
 import { formatDischarge } from '../../lib/format'
 import { useUiStore } from '../../stores/ui'
 import type { StationState } from '../../types'
-import { basemapStyle } from './basemap'
+import { basemapStyle, type BasemapKind } from './basemap'
 import {
   addBorderLayers,
   addRiverLayers,
@@ -51,6 +51,7 @@ const props = defineProps<{
   /** Markers appear only once discharge has loaded or failed. */
   showMarkers: boolean
 }>()
+const emit = defineEmits<{ basemap: [kind: BasemapKind] }>()
 
 const UKRAINE_BOUNDS: LngLatBoundsLike = [
   [22.0, 44.0],
@@ -217,10 +218,11 @@ function addOwnLayers() {
 /** Basemap for the theme and label language; `style.load` then brings our layers back. */
 function applyStyle() {
   const own = ++styleRequest
-  void basemapStyle(isDark.value, locale.value).then((style) => {
+  void basemapStyle(isDark.value, locale.value).then(({ style, kind }) => {
     if (!map || own !== styleRequest) return
     styleReady = false
     map.setStyle(style, { diff: false })
+    emit('basemap', kind)
   })
 }
 
@@ -264,21 +266,6 @@ function setHovered(id: string | null) {
   syncTooltip()
 }
 
-/**
- * MapLibre opens the compact attribution when it first fills and closes it only on a drag;
- * it starts closed here, behind its info button, at every map width.
- */
-function collapseAttribution(root: HTMLElement) {
-  const attribution = root.querySelector('.maplibregl-ctrl-attrib')
-  if (!attribution) return
-  const observer = new MutationObserver(() => {
-    if (!attribution.classList.contains('maplibregl-compact-show')) return
-    attribution.classList.remove('maplibregl-compact-show')
-    observer.disconnect()
-  })
-  observer.observe(attribution, { attributes: true, attributeFilter: ['class'] })
-}
-
 onMounted(() => {
   if (!container.value) return
   map = new maplibregl.Map({
@@ -292,9 +279,9 @@ onMounted(() => {
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,
-    attributionControl: { compact: true },
+    // Map credits live in the page footer (AppFooter), next to the map card.
+    attributionControl: false,
   })
-  collapseAttribution(container.value)
   map.touchZoomRotate.disableRotation()
   map.keyboard.disableRotation()
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left')

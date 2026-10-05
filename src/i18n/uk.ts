@@ -32,6 +32,8 @@ export const uk = {
   footer: {
     dataSource: 'Дані: GloFAS (Copernicus Emergency Management Service) via',
     modelled: 'Модельні дані.',
+    map: 'Мапа:',
+    relief: 'рельєф',
     about: 'Про дані та методику',
   },
   about: {

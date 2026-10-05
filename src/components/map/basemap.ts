@@ -122,17 +122,24 @@ async function loadHiddenLabels(): Promise<HiddenLabelsFile | null> {
   }
 }
 
+/** Which basemap is drawn; the footer credits its providers (the map has no attribution). */
+export type BasemapKind = 'openfreemap' | 'esri'
+
 /**
  * OpenFreeMap vector style for a theme and label language, or the Esri raster style when the
  * vector style fails to load.
  */
-export async function basemapStyle(dark: boolean, locale: Locale): Promise<StyleSpecification> {
+export async function basemapStyle(
+  dark: boolean,
+  locale: Locale,
+): Promise<{ style: StyleSpecification; kind: BasemapKind }> {
   try {
     const [response, hiddenLabels] = await Promise.all([fetch(STYLE_URL(dark)), loadHiddenLabels()])
     if (!response.ok) throw new Error(`OpenFreeMap style: HTTP ${response.status}`)
-    return adaptStyle((await response.json()) as StyleSpecification, dark, locale, hiddenLabels)
+    const style = (await response.json()) as StyleSpecification
+    return { style: adaptStyle(style, dark, locale, hiddenLabels), kind: 'openfreemap' }
   } catch (error) {
     console.warn('Vector basemap failed to load; switching to Esri Gray Canvas', error)
-    return esriStyle(dark)
+    return { style: esriStyle(dark), kind: 'esri' }
   }
 }

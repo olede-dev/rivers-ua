@@ -6,6 +6,7 @@ import AppHeader from '../components/layout/AppHeader.vue'
 import StationsSidebar from '../components/layout/StationsSidebar.vue'
 import MapTimeline from '../components/map/MapTimeline.vue'
 import { legendContent, mapMarks } from '../components/map/mapMarks'
+import type { BasemapKind } from '../components/map/basemap'
 import RiverMap from '../components/map/RiverMap.vue'
 import LoadingSkeleton from '../components/ui/LoadingSkeleton.vue'
 import SegmentedControl from '../components/ui/SegmentedControl.vue'
@@ -43,6 +44,8 @@ const errorMessage = computed(() =>
 )
 const notice = computed(() => snapshotNotice(discharge.data.value?.source, locale.value))
 const selected = computed(() => states.value.find((s) => s.station.id === ui.selectedId) ?? null)
+
+const basemap = ref<BasemapKind>('openfreemap')
 
 // Climate data loads only once a climate layer or a station panel needs it.
 const climate = useClimate(
@@ -122,6 +125,7 @@ const mapHeight = computed(() => {
             :marks="marks"
             :legend="legend"
             :show-markers="dischargeSettled"
+            @basemap="basemap = $event"
           />
           <div class="glass absolute top-3 right-3 z-[1000] rounded-[10px] shadow-float">
             <SegmentedControl
@@ -131,13 +135,13 @@ const mapHeight = computed(() => {
             />
           </div>
           <!--
-            A wide map card: bottom right, above the attribution button and beside the legend
-            (bottom left). A narrow one (a station open beside it): top, under the layer switch and
-            clear of the zoom buttons. Phones: a card of its own under the map, below.
+            A wide map card: bottom right, beside the legend (bottom left). A narrow one (a station
+            open beside it): top, under the layer switch and clear of the zoom buttons. Phones: a
+            card of its own under the map, below.
           -->
           <div
             v-if="showTimeline && isWide"
-            class="pointer-events-none absolute inset-x-3 top-15 z-[1000] flex justify-center pl-11 @2xl:top-auto @2xl:bottom-11 @2xl:justify-end @2xl:pl-0"
+            class="pointer-events-none absolute inset-x-3 top-15 z-[1000] flex justify-center pl-11 @2xl:top-auto @2xl:bottom-2.5 @2xl:justify-end @2xl:pl-0"
           >
             <MapTimeline
               v-model="mapDate"
@@ -200,6 +204,6 @@ const mapHeight = computed(() => {
         @retry="discharge.refetch()"
       />
     </div>
-    <AppFooter />
+    <AppFooter :basemap="basemap" />
   </div>
 </template>

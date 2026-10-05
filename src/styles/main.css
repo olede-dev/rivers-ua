@@ -187,24 +187,6 @@
   filter: invert(1);
 }
 
-.maplibregl-ctrl-attrib,
-.maplibregl-ctrl-attrib.maplibregl-compact {
-  border-radius: 10px;
-  background: var(--ui-glass);
-  color: var(--ui-ink-muted);
-}
-
-.maplibregl-ctrl-attrib a {
-  color: var(--ui-accent-ink);
-}
-
-/* On narrow maps the attribution wraps across the full width and hides the bottom-left legend. */
-@media (width < 640px) {
-  .maplibregl-ctrl-attrib.maplibregl-compact-show {
-    max-width: 50%;
-  }
-}
-
 .station-tooltip {
   pointer-events: none;
 }

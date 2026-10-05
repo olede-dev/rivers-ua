@@ -29,6 +29,8 @@ export const en: Messages = {
   footer: {
     dataSource: 'Data: GloFAS (Copernicus Emergency Management Service) via',
     modelled: 'Modelled data.',
+    map: 'Map:',
+    relief: 'relief',
     about: 'About the data and method',
   },
   about: {

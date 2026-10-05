@@ -2,9 +2,13 @@
 import { useTemplateRef } from 'vue'
 
 import { useLocale } from '../../composables/useLocale'
+import type { BasemapKind } from '../map/basemap'
 import AboutDialog from './AboutDialog.vue'
 
+/** The basemap providers' credits, required by their licences, stand in for map attribution. */
+defineProps<{ basemap: BasemapKind }>()
 const { t } = useLocale()
+const link = 'rounded text-accent-ink hover:underline focus-ring'
 const about = useTemplateRef<InstanceType<typeof AboutDialog>>('about')
 </script>
 
@@ -16,7 +20,32 @@ const about = useTemplateRef<InstanceType<typeof AboutDialog>>('about')
       {{ t.footer.dataSource }}
       <a class="rounded text-accent-ink hover:underline focus-ring" href="https://open-meteo.com/"
         >Open-Meteo.com</a
-      >. {{ t.footer.modelled }}
+      >. {{ t.footer.modelled }} {{ t.footer.map }}
+      <template v-if="basemap === 'openfreemap'">
+        <a :class="link" href="https://openfreemap.org/" target="_blank" rel="noopener"
+          >OpenFreeMap</a
+        >,
+        <a :class="link" href="https://www.openmaptiles.org/" target="_blank" rel="noopener"
+          >© OpenMapTiles</a
+        >,
+        <a
+          :class="link"
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noopener"
+          >© OpenStreetMap</a
+        >, {{ t.footer.relief }} © Esri.
+      </template>
+      <template v-else>
+        © Esri, HERE, Garmin,
+        <a
+          :class="link"
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noopener"
+          >© OpenStreetMap</a
+        >.
+      </template>
     </p>
     <button
       type="button"
