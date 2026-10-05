@@ -85,6 +85,12 @@ export const en: Messages = {
     now: 'Now',
     normToday: 'Norm for today',
     deviation: 'Deviation',
+    outlook: {
+      high: 'Forecast: water may rise above normal',
+      low: 'Forecast: low water possible',
+      highDetail: (date: string) => `forecast median above the p90 norm from ${date}`,
+      lowDetail: (date: string) => `forecast median below the p10 norm from ${date}`,
+    },
     chartHeading: 'GloFAS discharge and forecast',
     normsMissing: 'Norms failed to load — the chart is shown in m³/s.',
     loadingChart: 'Loading chart…',

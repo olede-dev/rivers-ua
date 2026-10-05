@@ -11,6 +11,7 @@ interface Formatters {
   smallNumber: Intl.NumberFormat
   coordinate: Intl.NumberFormat
   plainDate: Intl.DateTimeFormat
+  dayMonth: Intl.DateTimeFormat
 }
 
 const cache = new Map<Locale, Formatters>()
@@ -33,6 +34,7 @@ function formatters(locale: Locale): Formatters {
         year: 'numeric',
         timeZone: 'UTC',
       }),
+      dayMonth: new Intl.DateTimeFormat(tag, { day: 'numeric', month: 'long', timeZone: 'UTC' }),
     }
     cache.set(locale, set)
   }
@@ -81,4 +83,9 @@ export function formatCoordinates({ lat, lon }: Coordinates, locale: Locale = 'u
 /** Calendar date for reading: `2026-10-05` → `5 жовтня 2026 р.` / `5 October 2026`. */
 export function formatPlainDate(date: string, locale: Locale = 'uk'): string {
   return formatters(locale).plainDate.format(new Date(`${assertDate(date)}T00:00:00Z`))
+}
+
+/** Calendar date without the year: `2026-10-12` → `12 жовтня` / `12 October`. */
+export function formatDayMonth(date: string, locale: Locale = 'uk'): string {
+  return formatters(locale).dayMonth.format(new Date(`${assertDate(date)}T00:00:00Z`))
 }

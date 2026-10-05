@@ -87,6 +87,12 @@ export const uk = {
     now: 'Зараз',
     normToday: 'Норма на сьогодні',
     deviation: 'Відхилення',
+    outlook: {
+      high: 'Прогноз: можливе підвищення водності',
+      low: 'Прогноз: можливе маловоддя',
+      highDetail: (date: string) => `медіана прогнозу вище p90 норми з ${date}`,
+      lowDetail: (date: string) => `медіана прогнозу нижче p10 норми з ${date}`,
+    },
     chartHeading: 'Витрати і прогноз GloFAS',
     normsMissing: 'Норми не завантажилися — графік показано в м³/с.',
     loadingChart: 'Завантаження графіка…',

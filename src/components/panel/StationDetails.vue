@@ -5,6 +5,7 @@ import { isRateLimited } from '../../api/http'
 import { useLocale } from '../../composables/useLocale'
 import { usePrecipitation } from '../../composables/usePrecipitation'
 import { stationName } from '../../i18n'
+import { forecastOutlook } from '../../lib/anomaly'
 import { buildChartSeries } from '../../lib/chartSeries'
 import { formatCoordinates, formatDischarge, formatPct } from '../../lib/format'
 import { useUiStore, type ChartRange } from '../../stores/ui'
@@ -12,6 +13,7 @@ import type { DischargeSeries, StationNorms, StationState } from '../../types'
 import AnomalyBadge from '../ui/AnomalyBadge.vue'
 import ErrorState from '../ui/ErrorState.vue'
 import LoadingSkeleton from '../ui/LoadingSkeleton.vue'
+import OutlookBadge from '../ui/OutlookBadge.vue'
 import ChartControls from './ChartControls.vue'
 import DischargeChart from './DischargeChart.vue'
 import StatRow from './StatRow.vue'
@@ -47,6 +49,10 @@ const precipitationError = computed(() => {
     ? t.value.details.precipitationRateLimited
     : t.value.details.precipitationFailed
 })
+
+const outlook = computed(
+  () => props.series && props.norms && forecastOutlook(props.series, props.norms, props.today),
+)
 
 /** Relative mode needs a median norm to divide by; without norms the chart stays in m³/s. */
 const relative = computed(() => ui.mode === 'pct' && props.norms !== null)
@@ -133,6 +139,8 @@ onMounted(() => heading.value?.focus())
         <AnomalyBadge v-if="state.anomalyClass" :anomaly-class="state.anomalyClass" />
       </StatRow>
     </dl>
+
+    <OutlookBadge v-if="outlook" :outlook="outlook" />
 
     <section class="space-y-3" aria-labelledby="chart-heading">
       <h3 id="chart-heading" class="text-sm font-semibold text-slate-900 dark:text-slate-100">

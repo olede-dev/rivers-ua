@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { anomalyPct, classifyDischarge } from '../src/lib/anomaly'
-import type { NormDay } from '../src/types'
+import { anomalyPct, classifyDischarge, forecastOutlook } from '../src/lib/anomaly'
+import { addDays } from '../src/lib/dates'
+import type { DischargeSeries, NormDay, StationNorms } from '../src/types'
 
 const norm: NormDay = { p10: 10, p25: 25, median: 50, p75: 75, p90: 90 }
 
@@ -37,5 +38,50 @@ describe('anomalyPct', () => {
   it('is undefined without a value or with a zero median', () => {
     expect(anomalyPct(null, 50)).toBeNull()
     expect(anomalyPct(5, 0)).toBeNull()
+  })
+})
+
+describe('forecastOutlook', () => {
+  const today = '2026-10-05'
+  const norms: StationNorms = { meanAnnual: 50, doy: Array.from({ length: 365 }, () => norm) }
+
+  /** Forecast median for today and the 31 days after it, normal (50) except at `overrides`. */
+  function seriesWith(overrides: Record<number, number>): DischargeSeries {
+    const time = Array.from({ length: 32 }, (_, offset) => addDays(today, offset))
+    const median = time.map((_, offset) => overrides[offset] ?? 50)
+    const empty = time.map(() => null)
+    return {
+      cell: { lat: 50, lon: 30 },
+      time,
+      discharge: empty,
+      ensemble: { median, min: median, max: median, p25: median, p75: median },
+    }
+  }
+
+  it('reports the first day the median rises above p90', () => {
+    expect(forecastOutlook(seriesWith({ 12: 95, 13: 120 }), norms, today)).toEqual({
+      kind: 'high',
+      from: '2026-10-17',
+    })
+  })
+
+  it('reports low water when the median falls below p10', () => {
+    expect(forecastOutlook(seriesWith({ 3: 9 }), norms, today)).toEqual({
+      kind: 'low',
+      from: '2026-10-08',
+    })
+  })
+
+  it('takes the earlier crossing when the forecast leaves the norm both ways', () => {
+    expect(forecastOutlook(seriesWith({ 4: 5, 9: 95 }), norms, today)?.kind).toBe('low')
+  })
+
+  it('looks only at the 30 days after today, so today and day 31 do not count', () => {
+    expect(forecastOutlook(seriesWith({ 0: 95, 31: 95 }), norms, today)).toBeNull()
+    expect(forecastOutlook(seriesWith({ 30: 95 }), norms, today)?.from).toBe('2026-11-04')
+  })
+
+  it('treats p90 and p10 themselves as inside the norm', () => {
+    expect(forecastOutlook(seriesWith({ 5: 90, 6: 10 }), norms, today)).toBeNull()
   })
 })
