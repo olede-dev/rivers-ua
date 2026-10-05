@@ -3,12 +3,99 @@
 /* Dark mode follows the `dark` class on <html>, set by useTheme (and index.html before paint). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Design tokens (docs/adr/visual-design-language.md). Components use these names, not raw
+ * palette colours, so one place switches the light and dark appearance. Data colours (anomaly
+ * classes, chart series, basemap) are separate and stay in their own config.
+ */
+:root {
+  --ui-canvas: #f5f5f7;
+  --ui-surface: #ffffff;
+  /* Inset grouped rows on a surface. */
+  --ui-group: #f5f5f7;
+  --ui-glass: rgb(255 255 255 / 0.82);
+  --ui-ink: #1d1d1f;
+  /* 4.9:1 on the surface, 4.5:1 on the canvas: the lightest grey allowed for text. */
+  --ui-ink-muted: #6e6e73;
+  --ui-line: rgb(0 0 0 / 0.08);
+  --ui-fill: rgb(118 118 128 / 0.12);
+  --ui-fill-strong: rgb(118 118 128 / 0.2);
+  --ui-accent: #0071e3;
+  --ui-accent-hover: #0062c4;
+  --ui-accent-ink: #0066cc;
+  --ui-shadow-color: rgb(0 0 0 / 0.08);
+  --ui-ring: rgb(0 0 0 / 0.06);
+}
+
 .dark {
   color-scheme: dark;
+  --ui-canvas: #121214;
+  --ui-surface: #1c1c1e;
+  --ui-group: #2c2c2e;
+  --ui-glass: rgb(36 36 38 / 0.8);
+  --ui-ink: #f5f5f7;
+  --ui-ink-muted: #a1a1a6;
+  --ui-line: rgb(255 255 255 / 0.1);
+  --ui-fill: rgb(118 118 128 / 0.24);
+  --ui-fill-strong: rgb(118 118 128 / 0.34);
+  --ui-accent: #0a84ff;
+  --ui-accent-hover: #2b95ff;
+  --ui-accent-ink: #4da3ff;
+  --ui-shadow-color: rgb(0 0 0 / 0.4);
+  --ui-ring: rgb(255 255 255 / 0.08);
+}
+
+@theme inline {
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --color-canvas: var(--ui-canvas);
+  --color-surface: var(--ui-surface);
+  --color-group: var(--ui-group);
+  --color-glass: var(--ui-glass);
+  --color-ink: var(--ui-ink);
+  --color-ink-muted: var(--ui-ink-muted);
+  --color-line: var(--ui-line);
+  --color-fill: var(--ui-fill);
+  --color-fill-strong: var(--ui-fill-strong);
+  --color-accent: var(--ui-accent);
+  --color-accent-hover: var(--ui-accent-hover);
+  --color-accent-ink: var(--ui-accent-ink);
+  /* A hairline ring plus a soft drop: cards and floating panels. */
+  --shadow-card: 0 0 0 0.5px var(--ui-ring), 0 1px 3px var(--ui-shadow-color);
+  --shadow-float: 0 0 0 0.5px var(--ui-ring), 0 8px 28px var(--ui-shadow-color);
+}
+
+/* Translucent panel over the map or page; opaque enough that text keeps its contrast. */
+@utility glass {
+  background-color: var(--ui-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 2px;
+  }
+}
+
+@utility focus-ring-inset {
+  &:focus-visible {
+    outline: 2px solid var(--ui-accent);
+    outline-offset: -2px;
+  }
 }
 
 /* Tailwind v4 preflight leaves buttons with the default cursor; restore the pointer. */
 @layer base {
+  body {
+    background: var(--ui-canvas);
+    color: var(--ui-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   button:not(:disabled),
   [role='button']:not([aria-disabled='true']),
   summary {
@@ -16,31 +103,42 @@
   }
 }
 
-/* MapLibre's controls and the station tooltip are styled for a light page. */
+/* MapLibre's controls and the station tooltip, restyled to match the floating panels. */
 .dark .maplibregl-map {
-  background: var(--color-slate-900);
+  background: var(--ui-canvas);
 }
 
-.dark .maplibregl-ctrl-group {
-  background: var(--color-slate-800);
+.maplibregl-ctrl-group:not(:empty) {
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--ui-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-float);
 }
 
-.dark .maplibregl-ctrl-group button + button {
-  border-top-color: var(--color-slate-700);
+.maplibregl-ctrl-group button {
+  width: 32px;
+  height: 32px;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--ui-line);
 }
 
 .dark .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
   filter: invert(1);
 }
 
-.dark .maplibregl-ctrl-attrib,
-.dark .maplibregl-ctrl-attrib.maplibregl-compact {
-  background: rgb(15 23 42 / 0.8);
-  color: var(--color-slate-300);
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  border-radius: 10px;
+  background: var(--ui-glass);
+  color: var(--ui-ink-muted);
 }
 
-.dark .maplibregl-ctrl-attrib a {
-  color: var(--color-sky-300);
+.maplibregl-ctrl-attrib a {
+  color: var(--ui-accent-ink);
 }
 
 /* On narrow maps the attribution wraps across the full width and hides the bottom-left legend. */
@@ -55,22 +153,20 @@
 }
 
 .station-tooltip .maplibregl-popup-content {
-  padding: 4px 8px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
   font-size: 12px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  box-shadow: var(--shadow-float);
 }
 
-.dark .station-tooltip .maplibregl-popup-content {
-  background: var(--color-slate-800);
-  color: var(--color-slate-100);
+.station-tooltip.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: var(--ui-surface);
 }
 
-.dark .station-tooltip.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
-  border-top-color: var(--color-slate-800);
-}
-
-.dark .station-tooltip.maplibregl-popup-anchor-top .maplibregl-popup-tip {
-  border-bottom-color: var(--color-slate-800);
+.station-tooltip.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: var(--ui-surface);
 }
 
 /* Map marker overlays (stationLayers.ts): CSS animation keeps the WebGL map idle.
@@ -123,12 +219,12 @@
 
 /* The stations drawer slides in from the right edge on narrow screens. */
 .drawer[open] {
-  animation: drawer-in 200ms ease-out;
+  animation: drawer-in 280ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @keyframes drawer-in {
   from {
-    transform: translateX(100%);
+    transform: translateX(calc(100% + 1rem));
   }
 }
 

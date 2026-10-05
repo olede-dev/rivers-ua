@@ -60,11 +60,11 @@ onBeforeUnmount(stop)
 
 <template>
   <div
-    class="pointer-events-auto flex items-center gap-2 rounded-xl sm:gap-3 border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-2 py-1.5 shadow-lg sm:px-3 sm:py-2 backdrop-blur"
+    class="glass pointer-events-auto flex items-center gap-2 rounded-2xl px-2 py-1.5 shadow-float sm:gap-3 sm:px-2.5 sm:py-2"
   >
     <button
       type="button"
-      class="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-800 dark:bg-sky-700 text-white hover:bg-sky-900 dark:hover:bg-sky-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+      class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-white transition-colors hover:bg-accent-hover focus-ring"
       :aria-label="playing ? t.map.timeline.pause : t.map.timeline.play"
       :aria-pressed="playing"
       @click="toggle"
@@ -79,15 +79,15 @@ onBeforeUnmount(stop)
     </button>
     <div class="flex min-w-0 flex-1 flex-col gap-1">
       <div class="flex items-baseline justify-between gap-2 text-xs">
-        <span class="font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+        <span class="font-semibold tabular-nums text-ink">
           {{ formatDayMonth(date, locale) }}
         </span>
         <span
-          class="grid rounded px-1.5 py-0.5 text-center font-medium"
+          class="grid rounded-full px-2 py-0.5 text-center text-[11px] font-medium"
           :class="
             isForecast
-              ? 'bg-violet-100 dark:bg-violet-950 text-violet-800 dark:text-violet-200'
-              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+              ? 'bg-violet-500/15 text-violet-800 dark:text-violet-200'
+              : 'bg-fill text-ink-muted'
           "
         >
           <!-- Both labels share one grid cell so the badge keeps the wider one's width. -->
@@ -106,13 +106,13 @@ onBeforeUnmount(stop)
           min="0"
           :max="total"
           step="1"
-          class="timeline-range w-full accent-sky-700 dark:accent-sky-400"
+          class="timeline-range w-full accent-accent"
           :aria-label="t.map.timeline.label"
           :aria-valuetext="formatDayMonth(date, locale)"
         />
         <!-- Today's tick: observed values to the left, the ensemble median to the right. -->
         <span
-          class="pointer-events-none absolute top-0 h-full w-px bg-slate-500/70"
+          class="pointer-events-none absolute top-0 h-full w-px bg-ink-muted/60"
           :style="{ left: `${(todayIndex / total) * 100}%` }"
           aria-hidden="true"
         ></span>
@@ -122,7 +122,7 @@ onBeforeUnmount(stop)
     <button
       type="button"
       :class="{ invisible: date === today }"
-      class="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-sky-800 dark:text-sky-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+      class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-fill focus-ring"
       :aria-label="t.map.timeline.todayLabel"
       @click="backToToday"
     >

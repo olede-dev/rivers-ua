@@ -51,7 +51,7 @@ function onDialogClick(event: MouseEvent) {
     id="stations-sidebar"
     ref="dialog"
     aria-labelledby="stations-heading"
-    class="drawer m-0 ms-auto h-dvh max-h-none w-[min(26rem,calc(100%-3rem))] max-w-none overflow-y-auto bg-white dark:bg-slate-900 p-0 shadow-xl backdrop:bg-slate-900/50 dark:backdrop:bg-black/60"
+    class="drawer my-2 me-2 ms-auto h-[calc(100dvh-1rem)] max-h-none w-[min(26rem,calc(100%-3rem))] max-w-none overflow-y-auto rounded-2xl bg-surface p-0 text-ink shadow-float backdrop:bg-black/30 backdrop:backdrop-blur-[2px] dark:backdrop:bg-black/50"
     @close="ui.sidebarOpen = false"
     @click="onDialogClick"
   >
@@ -70,7 +70,7 @@ function onDialogClick(event: MouseEvent) {
     v-show="ui.sidebarOpen"
     id="stations-sidebar"
     aria-labelledby="stations-heading"
-    class="w-80 shrink-0 overflow-y-auto border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 xl:w-[22rem] 2xl:w-[26rem]"
+    class="w-80 shrink-0 overflow-y-auto rounded-2xl bg-surface shadow-card xl:w-[22rem] 2xl:w-[26rem]"
   >
     <StationsPanel
       :states="states"

@@ -30,6 +30,7 @@ import type { Locale } from '../../i18n'
 import { type ChartSeries, valueAxisMax } from '../../lib/chartSeries'
 import { formatDischarge, formatPctOfNorm, formatPrecipitation } from '../../lib/format'
 import type { DailyValues } from '../../types'
+import './chartDefaults'
 
 // Only the pieces this chart uses, so the rest of Chart.js is tree-shaken away.
 ChartJS.register(
@@ -55,30 +56,30 @@ const props = defineProps<{
 
 const PALETTES = {
   light: {
-    norm: '#64748b',
-    normBand: 'rgba(100, 116, 139, 0.15)',
-    forecast: '#2563eb',
-    forecastOuter: 'rgba(37, 99, 235, 0.12)',
-    forecastInner: 'rgba(37, 99, 235, 0.25)',
-    past: '#1e3a8a',
-    precipitation: 'rgba(13, 148, 136, 0.75)',
-    today: '#0f172a',
+    norm: '#8e8e93',
+    normBand: 'rgba(142, 142, 147, 0.16)',
+    forecast: '#0071e3',
+    forecastOuter: 'rgba(0, 113, 227, 0.1)',
+    forecastInner: 'rgba(0, 113, 227, 0.22)',
+    past: '#1d1d1f',
+    precipitation: 'rgba(48, 176, 199, 0.75)',
+    today: '#1d1d1f',
     todayText: '#ffffff',
-    text: '#475569',
-    grid: 'rgba(15, 23, 42, 0.1)',
+    text: '#6e6e73',
+    grid: 'rgba(0, 0, 0, 0.06)',
   },
   dark: {
-    norm: '#94a3b8',
-    normBand: 'rgba(148, 163, 184, 0.18)',
-    forecast: '#60a5fa',
-    forecastOuter: 'rgba(96, 165, 250, 0.14)',
-    forecastInner: 'rgba(96, 165, 250, 0.3)',
-    past: '#e0f2fe',
-    precipitation: 'rgba(45, 212, 191, 0.7)',
-    today: '#e2e8f0',
-    todayText: '#0f172a',
-    text: '#cbd5e1',
-    grid: 'rgba(226, 232, 240, 0.12)',
+    norm: '#98989d',
+    normBand: 'rgba(152, 152, 157, 0.2)',
+    forecast: '#0a84ff',
+    forecastOuter: 'rgba(10, 132, 255, 0.14)',
+    forecastInner: 'rgba(10, 132, 255, 0.3)',
+    past: '#f5f5f7',
+    precipitation: 'rgba(100, 210, 255, 0.7)',
+    today: '#f5f5f7',
+    todayText: '#1d1d1f',
+    text: '#a1a1a6',
+    grid: 'rgba(255, 255, 255, 0.08)',
   },
 }
 
@@ -261,8 +262,10 @@ const options = computed((): ChartOptions<'line' | 'bar'> => {
         position: 'bottom',
         labels: {
           color: COLORS.text,
-          boxWidth: 14,
+          boxWidth: 12,
           boxHeight: 8,
+          useBorderRadius: true,
+          borderRadius: 2,
           filter: (item) => item.datasetIndex === undefined || !lowerIndices.has(item.datasetIndex),
         },
       },
@@ -285,8 +288,9 @@ const options = computed((): ChartOptions<'line' | 'bar'> => {
               position: 'start',
               backgroundColor: COLORS.today,
               color: COLORS.todayText,
-              font: { size: 11 },
-              padding: 3,
+              font: { size: 11, weight: 600 },
+              padding: { x: 6, y: 3 },
+              borderRadius: 6,
             },
           },
         },

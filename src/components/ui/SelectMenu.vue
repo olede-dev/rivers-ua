@@ -103,13 +103,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
       :aria-controls="listboxId"
       :aria-labelledby="labelledby"
       :aria-activedescendant="open ? optionId(activeIndex) : undefined"
-      class="inline-flex h-8 w-full items-center justify-between gap-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 pr-2 pl-2.5 text-left text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+      class="inline-flex h-8 w-full items-center justify-between gap-2 rounded-lg bg-fill pr-2 pl-3 text-left text-[13px] font-medium text-ink transition-colors hover:bg-fill-strong focus-ring"
       @click="open ? hide() : show()"
       @keydown="onKeydown"
     >
       <span class="truncate">{{ selectedLabel }}</span>
       <svg
-        class="size-4 shrink-0 text-slate-500 dark:text-slate-400 transition-transform"
+        class="size-3.5 shrink-0 text-ink-muted transition-transform"
         :class="{ 'rotate-180': open }"
         viewBox="0 0 16 16"
         fill="none"
@@ -130,7 +130,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
       role="listbox"
       :aria-labelledby="labelledby"
       tabindex="-1"
-      class="absolute top-full left-0 z-20 mt-1 max-h-64 min-w-full overflow-auto rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 shadow-lg"
+      class="glass absolute top-full left-0 z-20 mt-1.5 max-h-64 min-w-full overflow-auto rounded-xl p-1.5 shadow-float"
     >
       <li
         v-for="(option, index) in options"
@@ -138,10 +138,11 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
         :key="option.value"
         role="option"
         :aria-selected="index === selectedIndex"
-        class="flex cursor-pointer items-center justify-between gap-3 rounded px-2 py-1.5 whitespace-nowrap text-slate-800 dark:text-slate-200"
+        class="flex cursor-pointer items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-[13px] whitespace-nowrap"
         :class="{
-          'bg-slate-100 dark:bg-slate-800': index === activeIndex,
-          'font-medium text-sky-800 dark:text-sky-300': index === selectedIndex,
+          'bg-accent text-white': index === activeIndex,
+          'text-ink': index !== activeIndex,
+          'font-medium': index === selectedIndex,
         }"
         @pointerenter="activeIndex = index"
         @click="choose(index)"

@@ -27,7 +27,7 @@ const rounded = (value: number | null) => (value === null ? '—' : String(Math.
 
 <template>
   <section class="space-y-3" aria-labelledby="climate-heading">
-    <h3 id="climate-heading" class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+    <h3 id="climate-heading" class="text-[17px] font-semibold tracking-tight text-ink">
       {{ t.climate.heading }}
     </h3>
     <LoadingSkeleton v-if="status === 'pending'" :label="t.climate.loading" class="h-44" />
@@ -37,9 +37,7 @@ const rounded = (value: number | null) => (value === null ? '—' : String(Math.
       @retry="$emit('retry')"
     />
     <template v-else-if="climate && summary">
-      <dl
-        class="divide-y divide-slate-200 dark:divide-slate-700 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-      >
+      <dl class="divide-y divide-line rounded-xl bg-group text-ink">
         <StatRow :label="t.climate.meanChange" :value="formatPct(summary.meanChangePct, locale)" />
         <StatRow
           :label="t.climate.lowSeasonChange"
@@ -58,10 +56,10 @@ const rounded = (value: number | null) => (value === null ? '—' : String(Math.
           :value="rounded(summary.recentMean)"
         />
       </dl>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
+      <p class="text-xs text-ink-muted">
         {{ t.climate.periods(formatYearRange(climate.recent), formatYearRange(climate.baseline)) }}
       </p>
-      <h4 class="text-xs font-medium text-slate-700 dark:text-slate-300">
+      <h4 class="pt-1 text-[13px] font-semibold text-ink">
         {{ t.climate.chartHeading(formatDayMonth(today, locale)) }}
       </h4>
       <LowFlowChart
@@ -70,30 +68,28 @@ const rounded = (value: number | null) => (value === null ? '—' : String(Math.
         :current-year="currentYear"
         :baseline-mean="summary.baselineMean"
       />
-      <ul class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
+      <ul class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-muted">
         <li class="flex items-center gap-1.5">
-          <span class="inline-block size-2.5 rounded-sm bg-[#d6c3a5] dark:bg-[#6b5b45]"></span>
+          <span class="inline-block size-2.5 rounded-[3px] bg-[#d6c3a5] dark:bg-[#6b5b45]"></span>
           {{ formatYearRange(climate.baseline) }}
         </li>
         <li class="flex items-center gap-1.5">
-          <span class="inline-block size-2.5 rounded-sm bg-[#ec7014] dark:bg-[#f59e0b]"></span>
+          <span class="inline-block size-2.5 rounded-[3px] bg-[#ec7014] dark:bg-[#f59e0b]"></span>
           {{ formatYearRange(climate.recent) }}
         </li>
         <li v-if="summary.thisYear !== null" class="flex items-center gap-1.5">
-          <span class="inline-block size-2.5 rounded-sm bg-[#8c2d04] dark:bg-[#fdba74]"></span>
+          <span class="inline-block size-2.5 rounded-[3px] bg-[#8c2d04] dark:bg-[#fdba74]"></span>
           {{ currentYear }}
         </li>
         <li class="flex items-center gap-1.5">
-          <span
-            class="inline-block w-3 border-t border-dashed border-slate-600 dark:border-slate-300"
-          ></span>
+          <span class="inline-block w-3 border-t border-dashed border-ink-muted"></span>
           {{ t.climate.baselineMean(formatYearRange(climate.baseline)) }}
         </li>
       </ul>
       <p v-if="thisYearFailed" role="status" class="text-xs text-amber-800 dark:text-amber-300">
         {{ t.climate.thisYearFailed }}
       </p>
-      <p class="text-xs text-slate-500 dark:text-slate-400">{{ t.climate.chartNote }}</p>
+      <p class="text-xs leading-relaxed text-ink-muted">{{ t.climate.chartNote }}</p>
     </template>
   </section>
 </template>

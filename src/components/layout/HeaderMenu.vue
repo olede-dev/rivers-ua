@@ -86,11 +86,11 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
       :aria-label="`${triggerLabel}: ${current.label}`"
       @click="open = !open"
     >
-      <slot name="icon" :value="current.value" icon-class="size-5" :in-menu="false" />
+      <slot name="icon" :value="current.value" icon-class="size-[18px]" :in-menu="false" />
       <span class="hidden sm:inline">{{ current.label }}</span>
       <svg
         viewBox="0 0 24 24"
-        class="hidden size-4 sm:block"
+        class="hidden size-3.5 text-ink-muted sm:block"
         aria-hidden="true"
         fill="none"
         stroke="currentColor"
@@ -108,7 +108,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
       ref="menu"
       role="menu"
       :aria-label="menuLabel"
-      class="absolute right-0 z-30 mt-1 w-40 rounded-md border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+      class="glass absolute right-0 z-30 mt-2 w-44 rounded-xl p-1.5 shadow-float"
       @keydown="onMenuKeydown"
     >
       <li v-for="option in options" :key="option.value" role="none">
@@ -117,7 +117,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
           role="menuitemradio"
           :aria-checked="model === option.value"
           tabindex="-1"
-          class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-800 hover:bg-slate-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sky-700 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus-visible:outline-sky-400"
+          class="group flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-[13px] text-ink outline-none hover:bg-accent hover:text-white focus-visible:bg-accent focus-visible:text-white"
           @click="choose(option.value)"
         >
           <slot name="icon" :value="option.value" icon-class="size-4 shrink-0" :in-menu="true" />
@@ -125,7 +125,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
           <svg
             v-if="model === option.value"
             viewBox="0 0 24 24"
-            class="size-4 shrink-0 text-sky-700 dark:text-sky-400"
+            class="size-4 shrink-0 text-accent group-hover:text-white group-focus-visible:text-white"
             aria-hidden="true"
             fill="none"
             stroke="currentColor"

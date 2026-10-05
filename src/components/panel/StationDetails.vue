@@ -90,13 +90,13 @@ onMounted(() => heading.value?.focus())
 </script>
 
 <template>
-  <article class="space-y-4">
+  <article class="space-y-6">
     <header>
       <div class="flex items-start justify-between gap-3">
         <h2
           ref="heading"
           tabindex="-1"
-          class="text-lg font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-none"
+          class="text-2xl leading-tight font-semibold tracking-tight text-ink focus-visible:outline-none"
         >
           {{ name.river }} — {{ name.place }}
         </h2>
@@ -104,39 +104,35 @@ onMounted(() => heading.value?.focus())
           type="button"
           :aria-label="t.details.close"
           :title="t.details.close"
-          class="-m-1 inline-flex size-8 shrink-0 items-center justify-center rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+          class="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-fill text-ink-muted transition-colors hover:bg-fill-strong hover:text-ink focus-ring"
           @click="ui.selectStation(null)"
         >
           <svg
             viewBox="0 0 24 24"
-            class="size-5"
+            class="size-3.5"
             aria-hidden="true"
             fill="none"
             stroke="currentColor"
           >
-            <path stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
+            <path stroke-width="2.5" stroke-linecap="round" d="M7 7l10 10M17 7L7 17" />
           </svg>
         </button>
       </div>
-      <p
-        class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600 dark:text-slate-400"
-      >
+      <p class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
         <span>{{ t.details.basin(t.basins[state.station.basin]) }}</span>
         <span
           v-if="state.station.focus"
-          class="rounded bg-sky-100 dark:bg-sky-900 px-1.5 text-[11px] text-sky-900 dark:text-sky-100"
+          class="rounded-full bg-accent/12 px-2 text-[11px] font-medium text-accent-ink"
         >
           {{ t.panel.focusBasin }}
         </span>
       </p>
-      <p v-if="state.cell" class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+      <p v-if="state.cell" class="mt-0.5 text-xs text-ink-muted">
         {{ t.details.cell(formatCoordinates(state.cell, locale)) }}
       </p>
     </header>
 
-    <dl
-      class="divide-y divide-slate-200 dark:divide-slate-700 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-    >
+    <dl class="divide-y divide-line rounded-xl bg-group text-ink">
       <StatRow
         :label="t.details.now"
         :value="formatDischarge(state.current, locale)"
@@ -155,11 +151,11 @@ onMounted(() => heading.value?.focus())
     <OutlookBadge v-if="outlook" :outlook="outlook" />
 
     <section class="space-y-3" aria-labelledby="chart-heading">
-      <h3 id="chart-heading" class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+      <h3 id="chart-heading" class="text-[17px] font-semibold tracking-tight text-ink">
         {{ t.details.chartHeading }}
       </h3>
       <ChartControls />
-      <p v-if="ui.mode === 'pct' && !norms" class="text-xs text-slate-600 dark:text-slate-400">
+      <p v-if="ui.mode === 'pct' && !norms" class="text-xs text-ink-muted">
         {{ t.details.normsMissing }}
       </p>
       <LoadingSkeleton
@@ -176,7 +172,7 @@ onMounted(() => heading.value?.focus())
       />
       <div
         v-else
-        class="flex h-[260px] items-center justify-center rounded bg-slate-100 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400 lg:h-80"
+        class="flex h-[260px] items-center justify-center rounded-xl bg-group text-sm text-ink-muted lg:h-80"
       >
         {{ t.details.noChartData }}
       </div>
@@ -186,7 +182,7 @@ onMounted(() => heading.value?.focus())
       <button
         v-if="series"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded border border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+        class="inline-flex items-center gap-1.5 rounded-full bg-fill px-3.5 py-1.5 text-[13px] font-medium text-accent-ink transition-colors hover:bg-fill-strong focus-ring"
         @click="exportCsv"
       >
         <svg
@@ -205,7 +201,7 @@ onMounted(() => heading.value?.focus())
         </svg>
         {{ t.details.exportCsv }}
       </button>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
+      <p class="text-xs leading-relaxed text-ink-muted">
         {{ t.details.chartNote }}
         <template v-if="ui.showPrecip"> {{ t.details.precipitationNote }}</template>
       </p>

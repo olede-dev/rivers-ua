@@ -264,6 +264,21 @@ function setHovered(id: string | null) {
   syncTooltip()
 }
 
+/**
+ * MapLibre opens the compact attribution when it first fills and closes it only on a drag;
+ * it starts closed here, behind its info button, at every map width.
+ */
+function collapseAttribution(root: HTMLElement) {
+  const attribution = root.querySelector('.maplibregl-ctrl-attrib')
+  if (!attribution) return
+  const observer = new MutationObserver(() => {
+    if (!attribution.classList.contains('maplibregl-compact-show')) return
+    attribution.classList.remove('maplibregl-compact-show')
+    observer.disconnect()
+  })
+  observer.observe(attribution, { attributes: true, attributeFilter: ['class'] })
+}
+
 onMounted(() => {
   if (!container.value) return
   map = new maplibregl.Map({
@@ -279,6 +294,7 @@ onMounted(() => {
     touchPitch: false,
     attributionControl: { compact: true },
   })
+  collapseAttribution(container.value)
   map.touchZoomRotate.disableRotation()
   map.keyboard.disableRotation()
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left')

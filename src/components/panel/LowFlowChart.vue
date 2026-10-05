@@ -16,6 +16,7 @@ import { Bar } from 'vue-chartjs'
 import { useLocale } from '../../composables/useLocale'
 import { useTheme } from '../../composables/useTheme'
 import type { YearCount, YearRange } from '../../lib/climate'
+import './chartDefaults'
 
 ChartJS.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, annotationPlugin)
 
@@ -32,17 +33,17 @@ const PALETTES = {
     past: '#d6c3a5',
     recent: '#ec7014',
     current: '#8c2d04',
-    reference: '#475569',
-    text: '#475569',
-    grid: 'rgba(15, 23, 42, 0.1)',
+    reference: '#6e6e73',
+    text: '#6e6e73',
+    grid: 'rgba(0, 0, 0, 0.06)',
   },
   dark: {
     past: '#6b5b45',
     recent: '#f59e0b',
     current: '#fdba74',
-    reference: '#cbd5e1',
-    text: '#cbd5e1',
-    grid: 'rgba(226, 232, 240, 0.12)',
+    reference: '#a1a1a6',
+    text: '#a1a1a6',
+    grid: 'rgba(255, 255, 255, 0.08)',
   },
 }
 
@@ -65,6 +66,7 @@ const data = computed((): ChartData<'bar', number[], string> => ({
       backgroundColor: props.byYear.map((c) => barColor(c.year)),
       barPercentage: 0.85,
       categoryPercentage: 1,
+      borderRadius: 3,
     },
   ],
 }))

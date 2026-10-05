@@ -9,9 +9,7 @@ defineProps<{
   <div role="status" aria-busy="true">
     <span class="sr-only">{{ label }}</span>
     <slot>
-      <div
-        class="h-full animate-pulse rounded bg-slate-100 dark:bg-slate-800 motion-reduce:animate-none"
-      ></div>
+      <div class="h-full animate-pulse rounded-xl bg-fill motion-reduce:animate-none"></div>
     </slot>
   </div>
 </template>

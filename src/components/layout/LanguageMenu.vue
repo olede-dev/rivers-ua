@@ -37,7 +37,7 @@ const model = computed({ get: () => locale.value, set: setLocale })
         aria-hidden="true"
         fill="none"
         stroke="currentColor"
-        stroke-width="2"
+        stroke-width="1.75"
         stroke-linecap="round"
         stroke-linejoin="round"
       >
@@ -47,7 +47,7 @@ const model = computed({ get: () => locale.value, set: setLocale })
       <svg
         v-else-if="value === 'uk'"
         viewBox="0 0 30 20"
-        class="h-3.5 w-5 shrink-0 rounded-[2px] ring-1 ring-slate-900/10 dark:ring-white/15"
+        class="h-3.5 w-5 shrink-0 rounded-[2px] ring-1 ring-line"
         aria-hidden="true"
       >
         <rect width="30" height="10" fill="#0057b7" />
@@ -57,7 +57,7 @@ const model = computed({ get: () => locale.value, set: setLocale })
         v-else
         viewBox="0 0 60 30"
         preserveAspectRatio="none"
-        class="h-3.5 w-5 shrink-0 rounded-[2px] ring-1 ring-slate-900/10 dark:ring-white/15"
+        class="h-3.5 w-5 shrink-0 rounded-[2px] ring-1 ring-line"
         aria-hidden="true"
       >
         <clipPath id="union-jack-clip"><rect width="60" height="30" /></clipPath>

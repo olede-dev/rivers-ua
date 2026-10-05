@@ -7,7 +7,7 @@ export type ThemePreference = 'auto' | Theme
 /** Same key and class as the inline script in `index.html`, which applies the theme before paint. */
 const STORAGE_KEY = 'theme'
 const DARK_CLASS = 'dark'
-const THEME_COLORS: Record<Theme, string> = { light: '#ffffff', dark: '#0f172a' }
+const THEME_COLORS: Record<Theme, string> = { light: '#f5f5f7', dark: '#121214' }
 
 /** `localStorage`, or `null` where the browser blocks it (private mode, disabled site data). */
 function browserStorage(): Storage | null {

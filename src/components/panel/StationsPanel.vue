@@ -20,27 +20,27 @@ const { t } = useLocale()
 </script>
 
 <template>
-  <div class="space-y-4 p-4">
+  <div class="space-y-4 p-4 sm:p-5">
     <div class="flex items-center justify-between gap-2">
-      <h2 id="stations-heading" class="text-base font-semibold text-slate-900 dark:text-slate-100">
+      <h2 id="stations-heading" class="text-xl font-semibold tracking-tight text-ink">
         {{ t.panel.heading }}
-        <span class="font-normal text-slate-500 dark:text-slate-400">· {{ states.length }}</span>
+        <span class="font-normal text-ink-muted">{{ states.length }}</span>
       </h2>
       <button
         type="button"
         :aria-label="closeLabel"
         :title="closeLabel"
-        class="-m-1 inline-flex size-8 items-center justify-center rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+        class="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-fill text-ink-muted transition-colors hover:bg-fill-strong hover:text-ink focus-ring"
         @click="$emit('close')"
       >
         <svg
           viewBox="0 0 24 24"
-          class="size-5"
+          class="size-3.5"
           aria-hidden="true"
           fill="none"
           stroke="currentColor"
         >
-          <path stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
+          <path stroke-width="2.5" stroke-linecap="round" d="M7 7l10 10M17 7L7 17" />
         </svg>
       </button>
     </div>
@@ -50,14 +50,14 @@ const { t } = useLocale()
       :message="dischargeErrorMessage"
       @retry="$emit('retry')"
     />
-    <p v-if="normsError" class="text-sm text-slate-600 dark:text-slate-400">
+    <p v-if="normsError" class="text-sm text-ink-muted">
       {{ t.panel.normsFailed }}
     </p>
     <LoadingSkeleton v-if="pending" :label="t.panel.loading" class="space-y-3">
       <div
         v-for="n in 6"
         :key="n"
-        class="h-8 animate-pulse rounded bg-slate-100 dark:bg-slate-800 motion-reduce:animate-none"
+        class="h-11 animate-pulse rounded-xl bg-fill motion-reduce:animate-none"
       ></div>
     </LoadingSkeleton>
     <StationList v-else :states="states" />

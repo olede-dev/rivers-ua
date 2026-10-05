@@ -45,27 +45,35 @@ defineExpose({ open })
   <dialog
     ref="dialog"
     aria-labelledby="about-heading"
-    class="m-auto max-h-[90dvh] w-[min(42rem,calc(100%-2rem))] rounded-lg bg-white p-0 text-slate-800 dark:bg-slate-900 dark:text-slate-200 shadow-xl backdrop:bg-slate-900/50 dark:backdrop:bg-black/60"
+    class="m-auto max-h-[90dvh] w-[min(42rem,calc(100%-2rem))] rounded-2xl bg-surface p-0 text-ink shadow-float backdrop:bg-black/30 backdrop:backdrop-blur-[2px] dark:backdrop:bg-black/50"
     @close="onClose"
     @click="onClick"
   >
-    <div class="space-y-4 p-5 text-sm leading-relaxed">
+    <div class="space-y-5 p-6 text-sm leading-relaxed">
       <div class="flex items-start justify-between gap-4">
-        <h2 id="about-heading" class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        <h2 id="about-heading" class="text-xl font-semibold tracking-tight">
           {{ t.about.heading }}
         </h2>
         <button
           type="button"
           :aria-label="t.about.close"
-          class="-m-1 rounded p-1 text-xl leading-none text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+          class="-m-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-fill text-ink-muted transition-colors hover:bg-fill-strong hover:text-ink focus-ring"
           @click="close"
         >
-          ×
+          <svg
+            viewBox="0 0 24 24"
+            class="size-3.5"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path stroke-width="2.5" stroke-linecap="round" d="M7 7l10 10M17 7L7 17" />
+          </svg>
         </button>
       </div>
 
       <section class="space-y-1">
-        <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+        <h3 class="font-semibold">
           {{ t.about.sourceHeading }}
         </h3>
         <!-- Prose with inline markup stays in the template, one block per language. -->
@@ -74,7 +82,7 @@ defineExpose({ open })
             Витрати води — гідрологічна модель <strong>GloFAS v4</strong> (Copernicus Emergency
             Management Service) через
             <a
-              class="text-sky-800 dark:text-sky-300 underline"
+              class="text-accent-ink hover:underline"
               href="https://open-meteo.com/en/docs/flood-api"
             >
               Open-Meteo Flood API</a
@@ -92,7 +100,7 @@ defineExpose({ open })
             Discharge comes from the <strong>GloFAS v4</strong> hydrological model (Copernicus
             Emergency Management Service) via the
             <a
-              class="text-sky-800 dark:text-sky-300 underline"
+              class="text-accent-ink hover:underline"
               href="https://open-meteo.com/en/docs/flood-api"
             >
               Open-Meteo Flood API</a
@@ -109,7 +117,7 @@ defineExpose({ open })
       </section>
 
       <section class="space-y-1">
-        <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+        <h3 class="font-semibold">
           {{ t.about.normHeading }}
         </h3>
         <p v-if="locale === 'uk'">
@@ -128,7 +136,7 @@ defineExpose({ open })
       </section>
 
       <section class="space-y-2">
-        <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+        <h3 class="font-semibold">
           {{ t.about.stateHeading }}
         </h3>
         <p v-if="locale === 'uk'">
@@ -141,20 +149,14 @@ defineExpose({ open })
         </p>
         <table class="w-full border-collapse text-left">
           <thead>
-            <tr
-              class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400"
-            >
-              <th scope="col" class="py-1 pr-3 font-medium">{{ t.about.stateColumn }}</th>
-              <th scope="col" class="py-1 font-medium">{{ t.about.ruleColumn }}</th>
+            <tr class="border-b border-line text-xs text-ink-muted">
+              <th scope="col" class="py-1.5 pr-3 font-medium">{{ t.about.stateColumn }}</th>
+              <th scope="col" class="py-1.5 font-medium">{{ t.about.ruleColumn }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="c in ANOMALY_CLASSES"
-              :key="c.id"
-              class="border-b border-slate-100 dark:border-slate-800"
-            >
-              <td class="py-1 pr-3">
+            <tr v-for="c in ANOMALY_CLASSES" :key="c.id" class="border-b border-line last:border-0">
+              <td class="py-1.5 pr-3">
                 <span class="flex items-center gap-1.5">
                   <span
                     class="size-2.5 shrink-0 rounded-full"
@@ -165,7 +167,7 @@ defineExpose({ open })
                   {{ t.anomalyClasses[c.id] }}
                 </span>
               </td>
-              <td class="py-1 font-mono text-xs">
+              <td class="py-1.5 font-mono text-xs">
                 {{ c.id === 'no-data' ? t.about.noDataRule : CLASS_RULES[c.id] }}
               </td>
             </tr>
@@ -174,7 +176,7 @@ defineExpose({ open })
       </section>
 
       <section class="space-y-1">
-        <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+        <h3 class="font-semibold">
           {{ t.about.limitsHeading }}
         </h3>
         <ul class="list-disc space-y-1 pl-5">

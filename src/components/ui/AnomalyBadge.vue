@@ -16,7 +16,7 @@ const dotStyle = computed(() =>
 
 <template>
   <span
-    class="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-1.5 py-0.5 text-xs leading-tight text-slate-800 dark:text-slate-200"
+    class="inline-flex items-center gap-1.5 rounded-full bg-surface px-2 py-0.5 text-xs leading-tight font-medium text-ink shadow-card"
   >
     <span class="size-2.5 shrink-0 rounded-full" :style="dotStyle"></span>
     {{ t.anomalyClasses[anomalyClass] }}

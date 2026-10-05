@@ -41,7 +41,7 @@ const model = computed({ get: () => preference.value, set: setPreference })
         aria-hidden="true"
         fill="none"
         stroke="currentColor"
-        stroke-width="2"
+        stroke-width="1.75"
         stroke-linecap="round"
         stroke-linejoin="round"
       >

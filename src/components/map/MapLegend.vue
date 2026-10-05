@@ -4,10 +4,6 @@ import type { LegendContent } from './mapMarks'
 
 defineProps<{ content: LegendContent }>()
 
-/** Below this width the legend starts collapsed so it does not cover southern markers. */
-const EXPANDED_LEGEND_QUERY = '(min-width: 640px)'
-const startOpen = window.matchMedia(EXPANDED_LEGEND_QUERY).matches
-
 /** Filled swatches carry the marker ring: white on the light map, dark on the dark one. */
 function swatchStyle(color: string | null): string {
   return color
@@ -17,17 +13,18 @@ function swatchStyle(color: string | null): string {
 </script>
 
 <template>
-  <!-- Collapsible legend of the current layer's classes; the open state survives content changes. -->
+  <!--
+    Collapsible legend of the current layer's classes, open at first at every width; the open
+    state survives content changes.
+  -->
   <details
-    :open="startOpen"
-    class="rounded-md bg-white/95 px-2 py-1.5 text-[11px] leading-tight shadow sm:px-3 sm:py-2 sm:text-xs dark:bg-slate-900/95"
+    open
+    class="glass rounded-xl px-2.5 py-2 text-[11px] leading-tight shadow-float sm:px-3 sm:py-2.5 sm:text-xs"
   >
-    <summary
-      class="cursor-pointer font-semibold text-slate-900 focus-visible:outline-2 focus-visible:outline-sky-700 dark:text-slate-100 dark:focus-visible:outline-sky-400"
-    >
+    <summary class="cursor-pointer rounded font-semibold text-ink focus-ring">
       {{ content.title }}
     </summary>
-    <ul class="mt-1 space-y-0.5 text-slate-700 dark:text-slate-300">
+    <ul class="mt-1.5 space-y-1 text-ink">
       <li v-for="row in content.rows" :key="row.label" class="flex items-center gap-2">
         <span
           class="inline-block size-3 shrink-0 rounded-full"
@@ -37,7 +34,7 @@ function swatchStyle(color: string | null): string {
         {{ row.label }}
       </li>
     </ul>
-    <p v-if="content.note" class="mt-1 max-w-48 text-[10px] text-slate-500 dark:text-slate-400">
+    <p v-if="content.note" class="mt-1.5 max-w-48 text-[10px] text-ink-muted">
       {{ content.note }}
     </p>
   </details>

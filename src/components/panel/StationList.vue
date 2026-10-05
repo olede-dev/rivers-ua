@@ -76,7 +76,7 @@ function dotStyle(state: StationState): Record<string, string> {
 
 <template>
   <div class="space-y-2">
-    <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+    <div class="flex items-center gap-2 text-[13px] text-ink-muted">
       <span id="station-sort-label" class="shrink-0">{{ t.panel.sortBy }}</span>
       <SelectMenu
         v-model="sortKey"
@@ -86,7 +86,7 @@ function dotStyle(state: StationState): Record<string, string> {
       />
       <button
         type="button"
-        class="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+        class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-fill text-ink transition-colors hover:bg-fill-strong focus-ring"
         :aria-label="sortDirection === 'asc' ? t.panel.ascending : t.panel.descending"
         :title="sortDirection === 'asc' ? t.panel.ascending : t.panel.descending"
         @click="toggleDirection"
@@ -100,44 +100,39 @@ function dotStyle(state: StationState): Record<string, string> {
         <button
           type="button"
           :aria-current="ui.selectedId === state.station.id ? 'true' : undefined"
-          class="flex w-full items-start gap-3 rounded-md px-2 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+          class="flex w-full items-start gap-3 rounded-xl px-2.5 py-2.5 text-left transition-colors hover:bg-fill focus-ring-inset"
           :class="{
-            'bg-sky-50 dark:bg-sky-950 hover:bg-sky-50 dark:hover:bg-sky-950':
-              ui.selectedId === state.station.id,
+            'bg-accent/12 hover:bg-accent/12': ui.selectedId === state.station.id,
           }"
           @click="ui.selectStation(state.station.id)"
         >
           <span class="mt-1.5 size-2.5 shrink-0 rounded-full" :style="dotStyle(state)"></span>
           <span class="min-w-0 flex-1">
             <span class="block text-sm leading-snug">
-              <span class="font-medium text-slate-900 dark:text-slate-100">{{
+              <span class="font-medium text-ink">{{
                 stationName(state.station, locale).river
               }}</span>
-              <span class="text-slate-600 dark:text-slate-400">
-                — {{ stationName(state.station, locale).place }}</span
-              >
+              <span class="text-ink-muted"> — {{ stationName(state.station, locale).place }}</span>
             </span>
             <span
-              class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-600 dark:text-slate-400"
+              class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted"
             >
               <span>{{
                 state.anomalyClass ? t.anomalyClasses[state.anomalyClass] : t.panel.unknownState
               }}</span>
               <span
                 v-if="state.station.focus"
-                class="rounded bg-sky-100 dark:bg-sky-900 px-1.5 text-sky-900 dark:text-sky-100"
+                class="rounded-full bg-accent/12 px-2 font-medium text-accent-ink"
               >
                 {{ t.panel.focusBasin }}
               </span>
             </span>
           </span>
           <span class="shrink-0 text-right tabular-nums">
-            <span
-              class="block text-sm leading-snug font-semibold text-slate-900 dark:text-slate-100"
-            >
+            <span class="block text-sm leading-snug font-semibold text-ink">
               {{ formatPct(state.anomalyPct, locale) }}
             </span>
-            <span class="mt-0.5 block text-xs whitespace-nowrap text-slate-600 dark:text-slate-400">
+            <span class="mt-0.5 block text-xs whitespace-nowrap text-ink-muted">
               {{ formatDischarge(state.current, locale) }} {{ t.dischargeUnit }}
             </span>
           </span>

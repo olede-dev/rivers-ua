@@ -73,23 +73,36 @@ watch(
 // Tailwind's `lg`: the sidebar docks beside the map and starts open; below it, a closed drawer.
 const isDesktop = useMediaQuery('(min-width: 64rem)')
 watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
+/** Tailwind's `sm`: below it the timeline leaves the map for a card of its own under it. */
+const isWide = useMediaQuery('(min-width: 40rem)')
+const showTimeline = computed(() => discharge.isSuccess.value && ui.layer === 'state')
+/**
+ * Phones without a selection: the map fills the screen between the header and the cards below
+ * (gutters, the 3.5rem header and bar, the 3.75rem timeline).
+ */
+const mapHeight = computed(() => {
+  if (selected.value) return 'h-[45dvh]'
+  if (showTimeline.value && !isWide.value) return 'h-[calc(100dvh-12.75rem)]'
+  return 'h-[calc(100dvh-8.5rem)] sm:h-[calc(100dvh-9.25rem)]'
+})
 </script>
 
 <template>
-  <div class="flex min-h-dvh flex-col bg-slate-50 dark:bg-slate-950 lg:h-dvh">
+  <!-- Every block is a rounded card on the canvas, separated by one gutter (gap and padding). -->
+  <div class="flex min-h-dvh flex-col gap-2 bg-canvas p-2 sm:gap-3 sm:p-3 lg:h-dvh">
     <AppHeader />
     <p
       v-if="notice"
       role="status"
-      class="shrink-0 border-b border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 px-4 py-2 text-sm text-amber-950 dark:text-amber-100"
+      class="shrink-0 rounded-xl bg-amber-100/80 px-4 py-2.5 text-sm text-amber-950 dark:bg-amber-950/70 dark:text-amber-100"
     >
       {{ notice }}
     </p>
-    <div class="flex flex-1 lg:min-h-0">
-      <main class="flex min-w-0 flex-1 flex-col lg:flex-row">
+    <div class="flex flex-1 gap-3 lg:min-h-0">
+      <main class="flex min-w-0 flex-1 flex-col gap-2 sm:gap-3 lg:flex-row">
         <section
-          class="relative isolate shrink-0 lg:h-auto lg:min-w-0 lg:flex-1"
-          :class="selected ? 'h-[45dvh]' : 'h-[calc(100dvh-7rem)]'"
+          class="@container relative isolate shrink-0 overflow-hidden rounded-2xl bg-surface shadow-card lg:h-auto lg:min-w-0 lg:flex-1"
+          :class="mapHeight"
           :aria-label="t.home.map"
         >
           <RiverMap
@@ -98,9 +111,7 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
             :legend="legend"
             :show-markers="dischargeSettled"
           />
-          <div
-            class="absolute top-2.5 right-2.5 z-[1000] rounded-md bg-white/95 shadow dark:bg-slate-900/95"
-          >
+          <div class="glass absolute top-3 right-3 z-[1000] rounded-[10px] shadow-float">
             <SegmentedControl
               v-model="ui.layer"
               :label="t.climate.layerLabel"
@@ -108,13 +119,13 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
             />
           </div>
           <!--
-            Phones: top of the map, clear of the zoom buttons, since the legend and attribution fill
-            the bottom. Wider screens: bottom right, above the attribution and away from the
-            legend (bottom left). Above Leaflet's panes and controls (z-index up to 1000).
+            A wide map card: bottom right, above the attribution button and beside the legend
+            (bottom left). A narrow one (a station open beside it): top, under the layer switch and
+            clear of the zoom buttons. Phones: a card of its own under the map, below.
           -->
           <div
-            v-if="discharge.isSuccess.value && ui.layer === 'state'"
-            class="pointer-events-none absolute inset-x-0 top-14 z-[1000] flex justify-center pr-2.5 pl-14 sm:top-auto sm:bottom-7 sm:justify-end sm:pl-2.5"
+            v-if="showTimeline && isWide"
+            class="pointer-events-none absolute inset-x-3 top-15 z-[1000] flex justify-center pl-11 @2xl:top-auto @2xl:bottom-11 @2xl:justify-end @2xl:pl-0"
           >
             <MapTimeline
               v-model="mapDate"
@@ -125,10 +136,18 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
             />
           </div>
         </section>
+        <MapTimeline
+          v-if="showTimeline && !isWide"
+          v-model="mapDate"
+          class="h-15 shrink-0"
+          :today="today"
+          :past-days="TIMELINE_PAST_DAYS"
+          :future-days="OUTLOOK_DAYS"
+        />
         <aside
           v-if="selected"
           :aria-label="t.home.station"
-          class="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 lg:w-[26rem] lg:shrink-0 lg:overflow-y-auto lg:border-l xl:w-[32rem] 2xl:w-[36rem]"
+          class="rounded-2xl bg-surface p-5 shadow-card lg:w-[26rem] lg:shrink-0 lg:overflow-y-auto xl:w-[32rem] 2xl:w-[36rem]"
         >
           <StationDetails
             :key="selected.station.id"
@@ -148,12 +167,12 @@ watch(isDesktop, (desktop) => (ui.sidebarOpen = desktop), { immediate: true })
         </aside>
         <div
           v-else-if="!isDesktop"
-          class="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 text-sm text-slate-600 dark:text-slate-400"
+          class="flex h-14 shrink-0 items-center justify-between gap-3 rounded-2xl bg-surface pr-2 pl-4 text-sm text-ink-muted shadow-card"
         >
           <span>{{ t.home.pickStation }}</span>
           <button
             type="button"
-            class="rounded-md bg-sky-800 dark:bg-sky-700 px-3 py-1.5 font-medium text-white hover:bg-sky-900 dark:hover:bg-sky-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 dark:focus-visible:outline-sky-400"
+            class="rounded-full bg-accent px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover focus-ring"
             @click="ui.sidebarOpen = true"
           >
             {{ t.home.stationList }}
