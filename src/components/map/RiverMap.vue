@@ -32,6 +32,8 @@ const container = useTemplateRef<HTMLDivElement>('container')
 // Leaflet objects stay outside Vue reactivity: proxies break them.
 let map: L.Map | undefined
 let resizeObserver: ResizeObserver | undefined
+/** Set once the user pans or zooms; until then the map keeps Ukraine in view on resize. */
+let viewTouched = false
 const markers = new Map<string, L.CircleMarker>()
 
 function markerRadius(meanAnnual: number | null): number {
@@ -97,7 +99,16 @@ onMounted(() => {
   map.fitBounds(UKRAINE_BOUNDS)
   createMapLegend().addTo(map)
 
-  resizeObserver = new ResizeObserver(() => map?.invalidateSize())
+  // A container measured while hidden or mid-layout gives fitBounds a wrong zoom; refit on resize.
+  const markTouched = () => (viewTouched = true)
+  for (const type of ['pointerdown', 'wheel', 'keydown'] as const) {
+    container.value.addEventListener(type, markTouched, { once: true, passive: true })
+  }
+  resizeObserver = new ResizeObserver(() => {
+    if (!map) return
+    map.invalidateSize()
+    if (!viewTouched && ui.selectedId === null) map.fitBounds(UKRAINE_BOUNDS, { animate: false })
+  })
   resizeObserver.observe(container.value)
   syncMarkers()
 })

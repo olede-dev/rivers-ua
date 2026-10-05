@@ -1,1 +1,8 @@
 @import 'tailwindcss';
+
+/* On narrow maps the attribution wraps across the full width and hides the bottom-left legend. */
+@media (width < 640px) {
+  .leaflet-control-attribution {
+    max-width: 50%;
+  }
+}
