@@ -7,6 +7,8 @@ import { formatCoordinates, formatDischarge, formatPct } from '../../lib/format'
 import { useUiStore, type ChartRange } from '../../stores/ui'
 import type { DischargeSeries, StationNorms, StationState } from '../../types'
 import AnomalyBadge from '../ui/AnomalyBadge.vue'
+import ErrorState from '../ui/ErrorState.vue'
+import LoadingSkeleton from '../ui/LoadingSkeleton.vue'
 import ChartControls from './ChartControls.vue'
 import DischargeChart from './DischargeChart.vue'
 import StatCard from './StatCard.vue'
@@ -17,7 +19,10 @@ const props = defineProps<{
   series: DischargeSeries | undefined
   norms: StationNorms | null
   today: string
+  /** Status of the discharge query `series` comes from. */
+  status: 'pending' | 'error' | 'success'
 }>()
+defineEmits<{ retry: [] }>()
 
 /** The short period shows 30 past days; the longer ones show 60, all the data request holds. */
 const PAST_DAYS: Record<ChartRange, number> = { 30: 30, 90: 60, 210: 60 }
@@ -72,7 +77,7 @@ onMounted(() => heading.value?.focus())
       </p>
     </header>
 
-    <dl class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <dl class="grid grid-cols-3 gap-2">
       <StatCard label="Зараз" :value="formatDischarge(state.current)" unit="м³/с" />
       <StatCard
         label="Норма на сьогодні"
@@ -92,8 +97,18 @@ onMounted(() => heading.value?.focus())
       <p v-if="ui.mode === 'pct' && !norms" class="text-xs text-slate-600">
         Норми не завантажилися — графік показано в м³/с.
       </p>
+      <LoadingSkeleton
+        v-if="status === 'pending'"
+        label="Завантаження графіка…"
+        class="h-[260px] lg:h-80"
+      />
+      <ErrorState
+        v-else-if="status === 'error'"
+        message="Не вдалося завантажити дані Open-Meteo."
+        @retry="$emit('retry')"
+      />
       <DischargeChart
-        v-if="chartSeries"
+        v-else-if="chartSeries"
         :series="chartSeries"
         :today="today"
         :relative="relative"

@@ -32,7 +32,7 @@ const container = useTemplateRef<HTMLDivElement>('container')
 // Leaflet objects stay outside Vue reactivity: proxies break them.
 let map: L.Map | undefined
 let resizeObserver: ResizeObserver | undefined
-/** Set once the user pans or zooms; until then the map keeps Ukraine in view on resize. */
+/** Set once the user pans or zooms; until then a resize restores the initial view. */
 let viewTouched = false
 const markers = new Map<string, L.CircleMarker>()
 
@@ -83,23 +83,35 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+function selectedPosition(id: string | null): L.LatLngTuple | null {
+  const station = props.states.find((s) => s.station.id === id)?.station
+  return station ? [station.marker.lat, station.marker.lon] : null
+}
+
 function focusSelection(id: string | null) {
   if (!map) return
   const animate = !prefersReducedMotion()
-  const state = props.states.find((s) => s.station.id === id)
-  if (state)
-    map.flyTo([state.station.marker.lat, state.station.marker.lon], SELECTED_ZOOM, { animate })
+  const position = selectedPosition(id)
+  if (position) map.flyTo(position, SELECTED_ZOOM, { animate })
   else map.flyToBounds(UKRAINE_BOUNDS, { animate })
+}
+
+/** Instant view for the current selection; a station may already be selected from the URL. */
+function resetView() {
+  if (!map) return
+  const position = selectedPosition(ui.selectedId)
+  if (position) map.setView(position, SELECTED_ZOOM, { animate: false })
+  else map.fitBounds(UKRAINE_BOUNDS, { animate: false })
 }
 
 onMounted(() => {
   if (!container.value) return
   map = L.map(container.value, { minZoom: 4, zoomSnap: 0.25 })
   addBasemap(map)
-  map.fitBounds(UKRAINE_BOUNDS)
+  resetView()
   createMapLegend().addTo(map)
 
-  // A container measured while hidden or mid-layout gives fitBounds a wrong zoom; refit on resize.
+  // A container measured while hidden or mid-layout gives a wrong initial view; reset it on resize.
   const markTouched = () => (viewTouched = true)
   for (const type of ['pointerdown', 'wheel', 'keydown'] as const) {
     container.value.addEventListener(type, markTouched, { once: true, passive: true })
@@ -107,7 +119,7 @@ onMounted(() => {
   resizeObserver = new ResizeObserver(() => {
     if (!map) return
     map.invalidateSize()
-    if (!viewTouched && ui.selectedId === null) map.fitBounds(UKRAINE_BOUNDS, { animate: false })
+    if (!viewTouched) resetView()
   })
   resizeObserver.observe(container.value)
   syncMarkers()

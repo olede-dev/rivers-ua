@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, h } from 'vue'
 
 import AppFooter from '../components/layout/AppFooter.vue'
 import AppHeader from '../components/layout/AppHeader.vue'
 import RiverMap from '../components/map/RiverMap.vue'
 import BasinFilter from '../components/panel/BasinFilter.vue'
 import StationList from '../components/panel/StationList.vue'
+import ErrorState from '../components/ui/ErrorState.vue'
+import LoadingSkeleton from '../components/ui/LoadingSkeleton.vue'
 import { useStationsState } from '../composables/useStationsState'
+import { useUrlSync } from '../composables/useUrlSync'
 import { useUiStore } from '../stores/ui'
 
 // Chart.js loads only when a station is opened, keeping it out of the initial bundle.
-const StationDetails = defineAsyncComponent(() => import('../components/panel/StationDetails.vue'))
+const StationDetails = defineAsyncComponent({
+  loader: () => import('../components/panel/StationDetails.vue'),
+  loadingComponent: () => h(LoadingSkeleton, { label: 'Завантаження станції…', class: 'h-96' }),
+  delay: 100,
+})
 
 const ui = useUiStore()
+useUrlSync()
 const { states, today, discharge, norms } = useStationsState()
 const dischargeSettled = computed(() => !discharge.isPending.value)
 const selected = computed(() => states.value.find((s) => s.station.id === ui.selectedId) ?? null)
@@ -37,31 +45,31 @@ const selected = computed(() => states.value.find((s) => s.station.id === ui.sel
           :series="discharge.data.value?.get(selected.station.id)"
           :norms="norms.data.value?.stations[selected.station.id] ?? null"
           :today="today"
+          :status="discharge.status.value"
+          @retry="discharge.refetch()"
         />
         <template v-else>
           <h2 id="stations-heading" class="text-base font-semibold text-slate-900">Станції</h2>
           <BasinFilter />
-          <div
+          <ErrorState
             v-if="discharge.isError.value"
-            role="alert"
-            class="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
-          >
-            Не вдалося завантажити дані Open-Meteo.
-            <button
-              type="button"
-              class="rounded border border-amber-400 bg-white px-2 py-1 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-sky-700"
-              @click="discharge.refetch()"
-            >
-              Спробувати ще
-            </button>
-          </div>
+            message="Не вдалося завантажити дані Open-Meteo."
+            @retry="discharge.refetch()"
+          />
           <p v-if="norms.isError.value" class="text-sm text-slate-600">
             Норми не завантажилися — відхилення і стан водності недоступні.
           </p>
-          <div v-if="discharge.isPending.value" class="space-y-3" aria-busy="true">
-            <span class="sr-only">Завантаження даних…</span>
-            <div v-for="n in 6" :key="n" class="h-8 animate-pulse rounded bg-slate-100"></div>
-          </div>
+          <LoadingSkeleton
+            v-if="discharge.isPending.value"
+            label="Завантаження даних…"
+            class="space-y-3"
+          >
+            <div
+              v-for="n in 6"
+              :key="n"
+              class="h-8 animate-pulse rounded bg-slate-100 motion-reduce:animate-none"
+            ></div>
+          </LoadingSkeleton>
           <StationList v-else :states="states" />
         </template>
       </aside>
