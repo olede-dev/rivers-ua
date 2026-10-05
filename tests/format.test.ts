@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatDischarge, formatPct } from '../src/lib/format'
+import { formatCoordinates, formatDischarge, formatPct } from '../src/lib/format'
 
 // uk-UA groups thousands with a no-break space and uses a decimal comma.
 const NBSP = ' '
@@ -20,5 +20,11 @@ describe('formatPct', () => {
     expect(formatPct(12)).toBe('+12%')
     expect(formatPct(-35)).toBe('−35%')
     expect(formatPct(0)).toBe('0%')
+  })
+})
+
+describe('formatCoordinates', () => {
+  it('writes three decimals with a comma and the hemisphere in Ukrainian', () => {
+    expect(formatCoordinates({ lat: 50.475, lon: 30.5 })).toBe('50,475° пн. ш., 30,500° сх. д.')
   })
 })
