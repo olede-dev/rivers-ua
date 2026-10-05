@@ -2,10 +2,13 @@
 import 'chartjs-adapter-date-fns'
 
 import {
+  BarController,
+  BarElement,
   Chart as ChartJS,
   Filler,
   Legend,
   LinearScale,
+  LineController,
   LineElement,
   PointElement,
   TimeScale,
@@ -19,18 +22,21 @@ import annotationPlugin from 'chartjs-plugin-annotation'
 import { enGB } from 'date-fns/locale/en-GB'
 import { uk } from 'date-fns/locale/uk'
 import { computed } from 'vue'
-import { Line } from 'vue-chartjs'
+import { Chart } from 'vue-chartjs'
 
 import { useLocale } from '../../composables/useLocale'
 import { useTheme } from '../../composables/useTheme'
 import type { Locale } from '../../i18n'
 import { type ChartSeries, valueAxisMax } from '../../lib/chartSeries'
-import { formatDischarge, formatPctOfNorm } from '../../lib/format'
+import { formatDischarge, formatPctOfNorm, formatPrecipitation } from '../../lib/format'
 import type { DailyValues } from '../../types'
 
 // Only the pieces this chart uses, so the rest of Chart.js is tree-shaken away.
 ChartJS.register(
+  LineController,
   LineElement,
+  BarController,
+  BarElement,
   PointElement,
   LinearScale,
   TimeScale,
@@ -55,6 +61,7 @@ const PALETTES = {
     forecastOuter: 'rgba(37, 99, 235, 0.12)',
     forecastInner: 'rgba(37, 99, 235, 0.25)',
     past: '#1e3a8a',
+    precipitation: 'rgba(13, 148, 136, 0.75)',
     today: '#0f172a',
     todayText: '#ffffff',
     text: '#475569',
@@ -67,6 +74,7 @@ const PALETTES = {
     forecastOuter: 'rgba(96, 165, 250, 0.14)',
     forecastInner: 'rgba(96, 165, 250, 0.3)',
     past: '#e0f2fe',
+    precipitation: 'rgba(45, 212, 191, 0.7)',
     today: '#e2e8f0',
     todayText: '#0f172a',
     text: '#cbd5e1',
@@ -80,7 +88,8 @@ const { isDark } = useTheme()
 const { locale, t } = useLocale()
 const colors = computed(() => (isDark.value ? PALETTES.dark : PALETTES.light))
 
-type LineDataset = ChartDataset<'line', DailyValues>
+/** Typed for the mixed chart: line datasets plus the precipitation bars. */
+type Dataset = ChartDataset<'line' | 'bar', DailyValues>
 
 /** A band is drawn by an invisible lower line and an upper line filled down to it. */
 interface Band {
@@ -95,7 +104,7 @@ const formatValue = (value: number | null) =>
     ? formatPctOfNorm(value, locale.value)
     : `${formatDischarge(value, locale.value)} ${t.value.dischargeUnit}`
 
-function line(label: string, data: DailyValues, style: Partial<LineDataset>): LineDataset {
+function line(label: string, data: DailyValues, style: Partial<Dataset>): Dataset {
   return { label, data, pointRadius: 0, pointHoverRadius: 3, borderWidth: 1.5, ...style }
 }
 
@@ -104,7 +113,7 @@ const chart = computed(() => {
   const COLORS = colors.value
   const labels = t.value.chart
   const bands: Band[] = []
-  const lines: LineDataset[] = []
+  const lines: Dataset[] = []
 
   // Listed bottom to top; datasets are reversed below because Chart.js draws index 0 last.
   if (series.norm) {
@@ -147,9 +156,22 @@ const chart = computed(() => {
   )
 
   // Top-most first. Each band upper line is followed by its lower line and fills to it.
-  const datasets: LineDataset[] = []
+  const datasets: Dataset[] = []
   const lowerIndices = new Set<number>()
   for (const dataset of [...lines].reverse()) datasets.push(dataset)
+  // Bars go between the lines and the bands: drawn over the translucent bands, under the lines.
+  const precipitationIndex = series.precipitation ? datasets.length : null
+  if (series.precipitation) {
+    datasets.push({
+      type: 'bar',
+      label: labels.precipitation,
+      data: series.precipitation,
+      yAxisID: 'y2',
+      backgroundColor: COLORS.precipitation,
+      barPercentage: 0.8,
+      categoryPercentage: 1,
+    })
+  }
   for (const band of [...bands].reverse()) {
     const upperIndex = datasets.length
     datasets.push(
@@ -163,14 +185,17 @@ const chart = computed(() => {
     lowerIndices.add(upperIndex + 1)
   }
 
-  const data: ChartData<'line', DailyValues, string> = { labels: series.time, datasets }
-  return { data, lowerIndices }
+  const data: ChartData<'line' | 'bar', DailyValues, string> = { labels: series.time, datasets }
+  return { data, lowerIndices, precipitationIndex }
 })
 
-function tooltipLabel(item: TooltipItem<'line'>): string {
+function tooltipLabel(item: TooltipItem<'line' | 'bar'>): string {
   const { datasetIndex, dataIndex, dataset } = item
-  const lowerIndices = chart.value.lowerIndices
+  const { lowerIndices, precipitationIndex } = chart.value
   const value = dataset.data[dataIndex] as number | null
+  if (datasetIndex === precipitationIndex) {
+    return `${dataset.label}: ${formatPrecipitation(value, locale.value)} ${t.value.chart.precipitationUnit}`
+  }
   if (lowerIndices.has(datasetIndex + 1)) {
     const lower = chart.value.data.datasets[datasetIndex + 1].data[dataIndex]
     return `${dataset.label}: ${formatValue(lower)} … ${formatValue(value)}`
@@ -178,8 +203,8 @@ function tooltipLabel(item: TooltipItem<'line'>): string {
   return `${dataset.label}: ${formatValue(value)}`
 }
 
-const options = computed((): ChartOptions<'line'> => {
-  const { lowerIndices } = chart.value
+const options = computed((): ChartOptions<'line' | 'bar'> => {
+  const { lowerIndices, precipitationIndex } = chart.value
   const COLORS = colors.value
   return {
     color: COLORS.text,
@@ -197,6 +222,8 @@ const options = computed((): ChartOptions<'line'> => {
           tooltipFormat: 'd MMMM yyyy',
           displayFormats: { day: 'd MMM', week: 'd MMM', month: 'd MMM' },
         },
+        // Bars would otherwise pad the axis by half a day and shift the lines off the edges.
+        offset: false,
         ticks: { maxRotation: 0, autoSkipPadding: 12, color: COLORS.text },
         grid: { display: false },
       },
@@ -214,6 +241,18 @@ const options = computed((): ChartOptions<'line'> => {
           color: COLORS.text,
           callback: (value) =>
             props.relative ? `${value}%` : formatDischarge(+value, locale.value),
+        },
+      },
+      y2: {
+        display: precipitationIndex !== null,
+        position: 'right',
+        min: 0,
+        title: { display: true, text: t.value.chart.precipitationAxis, color: COLORS.text },
+        grid: { drawOnChartArea: false },
+        border: { color: COLORS.grid },
+        ticks: {
+          color: COLORS.text,
+          callback: (value) => formatPrecipitation(+value, locale.value),
         },
       },
     },
@@ -259,6 +298,12 @@ const options = computed((): ChartOptions<'line'> => {
 
 <template>
   <div class="h-[260px] lg:h-80">
-    <Line :data="chart.data" :options="options" :aria-label="t.chart.ariaLabel" role="img" />
+    <Chart
+      type="line"
+      :data="chart.data"
+      :options="options"
+      :aria-label="t.chart.ariaLabel"
+      role="img"
+    />
   </div>
 </template>

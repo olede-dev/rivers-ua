@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { fetchDischargeHistory } from '../src/api/flood'
 import { AppError, getJson, shouldRetryQuery } from '../src/api/http'
+import { fetchPrecipitation } from '../src/api/weather'
 
 const URL_UNDER_TEST = new URL('https://flood-api.open-meteo.com/v1/flood')
 
@@ -91,6 +92,26 @@ describe('fetchDischargeHistory', () => {
         { startDate: '2020-01-01', endDate: '2020-01-02' },
       ),
     ).rejects.toMatchObject({ code: 'upstream_invalid_response' })
+  })
+})
+
+describe('fetchPrecipitation', () => {
+  const point = { lat: 50.45, lon: 30.57 }
+  const window = { pastDays: 1, forecastDays: 1 }
+
+  it('reads the daily sums aligned with their dates', async () => {
+    stubFetch({ daily: { time: ['2026-10-04', '2026-10-05'], precipitation_sum: [3.2, null] } })
+    await expect(fetchPrecipitation(point, window)).resolves.toEqual({
+      time: ['2026-10-04', '2026-10-05'],
+      precipitation: [3.2, null],
+    })
+  })
+
+  it('rejects sums that do not line up with the dates', async () => {
+    stubFetch({ daily: { time: ['2026-10-04', '2026-10-05'], precipitation_sum: [3.2] } })
+    await expect(fetchPrecipitation(point, window)).rejects.toMatchObject({
+      code: 'upstream_invalid_response',
+    })
   })
 })
 

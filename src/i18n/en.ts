@@ -44,6 +44,7 @@ export const en: Messages = {
     limits: [
       'The map marker sits on the river, while the data belongs to the centre of the GloFAS cell.',
       'Current values come from the operational forecast and the norm from the reanalysis, so the comparison with the norm is approximate.',
+      'Precipitation is at the station point (Open-Meteo model), not averaged over the catchment; its forecast covers 16 days only.',
     ],
   },
   home: {
@@ -88,6 +89,11 @@ export const en: Messages = {
     normsMissing: 'Norms failed to load — the chart is shown in m³/s.',
     loadingChart: 'Loading chart…',
     noChartData: 'No data for the chart',
+    precipitationNote:
+      'Precipitation at the station point (not over the catchment), forecast for 16 days.',
+    precipitationFailed: 'Precipitation failed to load.',
+    precipitationRateLimited:
+      'Precipitation unavailable: the Open-Meteo request limit is exhausted.',
     chartNote:
       'Forecast — GloFAS ensemble: median, interquartile range (p25–p75) and full spread (min–max). Norm — 1991–2020 for the same day of the year.',
   },
@@ -95,6 +101,7 @@ export const en: Messages = {
     rangeLabel: 'Forecast horizon',
     ranges: { 30: '30 days', 90: '3 months', 210: '7 months' },
     modeLabel: 'Chart units',
+    precipitationToggle: 'Precipitation',
     pctOfNorm: '% of norm',
     normBand: 'Norm p25–p75',
     forecastSpread: 'Forecast min–max',
@@ -104,6 +111,9 @@ export const en: Messages = {
     forecastMedian: 'Forecast (ensemble median)',
     past: 'Past values (model)',
     dischargeAxis: 'Discharge, m³/s',
+    precipitation: 'Precipitation',
+    precipitationAxis: 'Precipitation, mm',
+    precipitationUnit: 'mm',
     today: 'Today',
     ariaLabel: 'Discharge chart: past values, ensemble forecast and norm',
   },

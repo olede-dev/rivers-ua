@@ -46,6 +46,12 @@ export function formatDischarge(value: number | null, locale: Locale = 'uk'): st
   return (Math.abs(value) >= 10 ? largeNumber : smallNumber).format(value)
 }
 
+/** Precipitation in mm without the unit, one decimal at most. */
+export function formatPrecipitation(value: number | null, locale: Locale = 'uk'): string {
+  if (value === null) return '—'
+  return formatters(locale).smallNumber.format(value)
+}
+
 /** Signed percent with a typographic minus: `+12%`, `−35%`, `0%`. */
 export function formatPct(value: number | null, locale: Locale = 'uk'): string {
   if (value === null) return '—'

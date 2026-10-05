@@ -1,3 +1,4 @@
+import type { PrecipitationSeries } from '../api/weather'
 import type { DailyValues, DischargeSeries, StationNorms } from '../types'
 import { addDays, dayOfYear } from './dates'
 import { nonNull, roundTo } from './stats'
@@ -24,6 +25,8 @@ export interface ChartSeries {
   }
   /** `null` when norms are unavailable. */
   norm: { median: DailyValues; p25: DailyValues; p75: DailyValues } | null
+  /** mm per day, never scaled to the norm; `null` when precipitation is not shown. */
+  precipitation: DailyValues | null
 }
 
 function toPercent(value: number | null, median: number | null): number | null {
@@ -35,11 +38,13 @@ function toPercent(value: number | null, median: number | null): number | null {
  * Cuts a station's discharge to `[today − pastDays, today + forecastDays]` and splits it into
  * the past line (up to today) and the ensemble forecast (from today), plus the norm per date.
  * In relative mode every value, norm bounds included, is divided by that date's median norm.
+ * Precipitation is matched by date; days it does not cover (beyond its 16-day forecast) stay empty.
  */
 export function buildChartSeries(
   series: DischargeSeries,
   norms: StationNorms | null,
   window: ChartWindow,
+  precipitation: PrecipitationSeries | null = null,
 ): ChartSeries {
   const from = addDays(window.today, -window.pastDays)
   const to = addDays(window.today, window.forecastDays)
@@ -71,7 +76,14 @@ export function buildChartSeries(
       p25: scale(normDays.map((day) => day.p25)),
       p75: scale(normDays.map((day) => day.p75)),
     },
+    precipitation:
+      precipitation && alignByDate(time, precipitation.time, precipitation.precipitation),
   }
+}
+
+function alignByDate(time: string[], sourceTime: string[], values: DailyValues): DailyValues {
+  const byDate = new Map(sourceTime.map((date, i) => [date, values[i]]))
+  return time.map((date) => byDate.get(date) ?? null)
 }
 
 /** Headroom above the core series before the min–max band is cut at the top edge. */

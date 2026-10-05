@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, useTemplateRef } from 'vue'
 
+import { isRateLimited } from '../../api/http'
 import { useLocale } from '../../composables/useLocale'
+import { usePrecipitation } from '../../composables/usePrecipitation'
 import { stationName } from '../../i18n'
 import { buildChartSeries } from '../../lib/chartSeries'
 import { formatCoordinates, formatDischarge, formatPct } from '../../lib/format'
@@ -35,18 +37,34 @@ const { locale, t } = useLocale()
 const name = computed(() => stationName(props.state.station, locale.value))
 const heading = useTemplateRef<HTMLHeadingElement>('heading')
 
+const precipitation = usePrecipitation(
+  () => props.state.station,
+  () => ui.showPrecip,
+)
+const precipitationError = computed(() => {
+  if (!ui.showPrecip || !precipitation.isError.value) return null
+  return isRateLimited(precipitation.error.value)
+    ? t.value.details.precipitationRateLimited
+    : t.value.details.precipitationFailed
+})
+
 /** Relative mode needs a median norm to divide by; without norms the chart stays in m³/s. */
 const relative = computed(() => ui.mode === 'pct' && props.norms !== null)
 
 const chartSeries = computed(
   () =>
     props.series &&
-    buildChartSeries(props.series, props.norms, {
-      today: props.today,
-      pastDays: PAST_DAYS[ui.range],
-      forecastDays: ui.range,
-      relative: relative.value,
-    }),
+    buildChartSeries(
+      props.series,
+      props.norms,
+      {
+        today: props.today,
+        pastDays: PAST_DAYS[ui.range],
+        forecastDays: ui.range,
+        relative: relative.value,
+      },
+      ui.showPrecip ? (precipitation.data.value ?? null) : null,
+    ),
 )
 
 // The panel opens beside the map; move focus so keyboard and screen-reader users follow.
@@ -142,8 +160,12 @@ onMounted(() => heading.value?.focus())
       >
         {{ t.details.noChartData }}
       </div>
+      <p v-if="precipitationError" role="status" class="text-xs text-amber-800 dark:text-amber-300">
+        {{ precipitationError }}
+      </p>
       <p class="text-xs text-slate-500 dark:text-slate-400">
         {{ t.details.chartNote }}
+        <template v-if="ui.showPrecip"> {{ t.details.precipitationNote }}</template>
       </p>
     </section>
   </article>

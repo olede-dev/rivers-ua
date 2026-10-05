@@ -52,6 +52,15 @@ describe('buildChartSeries', () => {
     expect(result.norm?.p25).toEqual([null, 50, 50])
   })
 
+  it('matches precipitation by date, unscaled, and leaves days it does not cover empty', () => {
+    const precipitation = {
+      time: ['2026-01-01', '2026-01-02', '2026-01-03'],
+      precipitation: [1, 2.5, 0],
+    }
+    const result = buildChartSeries(series, norms, { ...window, relative: true }, precipitation)
+    expect(result.precipitation).toEqual([2.5, 0, null])
+  })
+
   it('omits the norm without norms data, and relative values with it', () => {
     const result = buildChartSeries(series, null, { ...window, relative: true })
     expect(result.norm).toBeNull()
