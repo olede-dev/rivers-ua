@@ -14,6 +14,9 @@ import {
   type BBox,
   type Position,
 } from '../src/lib/geometry'
+import { getJson } from '../src/api/http'
+import { looseEnds, orientDownstream } from '../src/lib/riverFlow'
+import { retryOnRateLimit } from './lib/rate-limit'
 
 const SOURCE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson'
 /** Cheap pre-filter before the exact cut along the border. */
@@ -24,6 +27,9 @@ const RIVER_TOLERANCE = 0.004
 const BORDER_TOLERANCE = 0.002
 const DIGITS = 3
 const MAX_RIVERS_BYTES = 300 * 1024
+const ELEVATION_URL = 'https://api.open-meteo.com/v1/elevation'
+/** The elevation API takes at most 100 coordinates per request. */
+const ELEVATION_BATCH = 100
 
 async function download(name: string): Promise<FeatureCollection> {
   const response = await fetch(`${SOURCE}/${name}.geojson`)
@@ -67,6 +73,42 @@ function riverFeatures(
   return features
 }
 
+/** Terrain height of every point, metres, from the Open-Meteo Elevation API. */
+async function elevations(points: Position[]): Promise<Map<string, number>> {
+  const heights = new Map<string, number>()
+  for (let i = 0; i < points.length; i += ELEVATION_BATCH) {
+    const batch = points.slice(i, i + ELEVATION_BATCH)
+    const url = new URL(ELEVATION_URL)
+    url.searchParams.set('latitude', batch.map((p) => p[1]).join(','))
+    url.searchParams.set('longitude', batch.map((p) => p[0]).join(','))
+    const body = (await retryOnRateLimit('elevation', () => getJson(url))) as {
+      elevation: number[]
+    }
+    batch.forEach((p, k) => heights.set(`${p[0]},${p[1]}`, body.elevation[k]))
+  }
+  return heights
+}
+
+/**
+ * Reorders every river line to run downstream, so the map's flow animation (which follows
+ * the drawing direction) moves with the current. Natural Earth lines are not consistently
+ * drawn that way.
+ */
+async function orientRivers(rivers: RiversFile): Promise<void> {
+  const lines = rivers.features.flatMap((f) => linesOf(f.geometry))
+  const oriented = orientDownstream(lines, await elevations(looseEnds(lines)))
+  let next = 0
+  for (const feature of rivers.features) {
+    const count = linesOf(feature.geometry).length
+    const own = oriented.slice(next, next + count)
+    next += count
+    feature.geometry =
+      own.length === 1
+        ? { type: 'LineString', coordinates: own[0] }
+        : { type: 'MultiLineString', coordinates: own }
+  }
+}
+
 async function writeJson(path: string, value: unknown): Promise<number> {
   const text = `${JSON.stringify(value)}\n`
   await writeFile(new URL(`../public/${path}`, import.meta.url), text)
@@ -107,6 +149,7 @@ const rivers: RiversFile = {
     ...riverFeatures(mainRivers, true, borderRings),
   ],
 }
+await orientRivers(rivers)
 const riversBytes = await writeJson(RIVERS_PATH, rivers)
 if (riversBytes > MAX_RIVERS_BYTES) {
   throw new Error(`${RIVERS_PATH} is ${riversBytes} bytes, over the ${MAX_RIVERS_BYTES} budget`)
